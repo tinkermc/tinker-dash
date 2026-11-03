@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "./ui/theme.css";
+
+/* The window itself never scrolls; each page handles its own scrolling. */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none; /* stops the macOS rubber-band bounce */
+  background-color: #0b0d10; /* matches the app background if anything peeks through */
+}

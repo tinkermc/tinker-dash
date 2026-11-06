@@ -1,3 +1,4 @@
+// @subframe/sync-disable
 "use client";
 /*
  * Documentation:

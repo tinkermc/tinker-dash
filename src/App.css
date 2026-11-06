@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "./ui/theme.css";
 
 /* The window itself never scrolls; each page handles its own scrolling. */
 html,

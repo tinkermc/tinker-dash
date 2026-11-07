@@ -1,0 +1,7 @@
+{
+  "tailwindCSS.experimental.configFile": "src/App.css",
+  "files.associations": { "*.css": "tailwindcss" },
+  "editor.quickSuggestions": { "strings": "on" },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.preferences.importModuleSpecifier": "non-relative"
+}

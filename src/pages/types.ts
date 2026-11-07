@@ -2,7 +2,7 @@ export type TabId =
   | "Connection"
   | "Server"
   | "Mods"
-  | "Explorer"
+  | "Files"
   | "World"
   | "Players"
   | "Console"

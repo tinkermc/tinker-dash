@@ -5,6 +5,13 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    "core:window:deny-set-fullscreen",
+    "core:window:deny-set-fullscreen-on-monitor",
+    "core:window:deny-set-simple-fullscreen",
+    "core:window:deny-set-maximizable",
+    "core:window:deny-set-resizable",
+    "core:window:deny-set-size",
+    "core:window:deny-set-size-constraints"
   ]
 }

@@ -1,5 +1,5 @@
 "use client";
-import { CustomComponent as CustomComponentComponent } from "./CustomComponent";
+import { StatCard as StatCardComponent } from "./StatCard";
 
 /**
  * Add wrapper components and business logic here.
@@ -7,4 +7,4 @@ import { CustomComponent as CustomComponentComponent } from "./CustomComponent";
  * Learn more: https://docs.subframe.com/develop/concepts/syncing-components#wrapping-components
  */
 
-export const CustomComponent = CustomComponentComponent;
+export const StatCard = StatCardComponent;

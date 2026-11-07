@@ -1,143 +1,26 @@
 
 
 
-import RoundCompass from "@/ui/icons/RoundCompass";
-import RoundDownload from "@/ui/icons/RoundDownload";
-import RoundLayers from "@/ui/icons/RoundLayers";
-import RoundList from "@/ui/icons/RoundList";
-import RoundPeople from "@/ui/icons/RoundPeople";
-import RoundSaveAll from "@/ui/icons/RoundSaveAll";
-import RoundSearch from "@/ui/icons/RoundSearch";
-import RoundServerX1 from "@/ui/icons/RoundServerX1";
-import RoundTerminal from "@/ui/icons/RoundTerminal";
-import RoundWifi from "@/ui/icons/RoundWifi";
-import TinkerDash from "@/ui/icons/TinkerDash";
+import { AppHeader } from "@/ui/components/AppHeader";
+import { Checkbox } from "@/ui/components/Checkbox";
+import { ConsoleServerHeader } from "@/ui/components/ConsoleServerHeader";
+import { LogEntry } from "@/ui/components/LogEntry";
+import { TabBar } from "@/ui/components/TabBar";
 import type { PageProps } from "./types";
+import RoundSearch from "@/ui/icons/RoundSearch";
 
 function Console({ onNavigate }: PageProps) {
   return (
-    <div className="flex h-[720px] w-320 flex-col items-start bg-[#0b0d10] font-['Inter']">
-      <header className="flex w-full items-center gap-2 border-b border-solid border-[#1a1e23] bg-[#101317] px-6 py-4 mobile:px-4">
-        <div className="flex items-center gap-3">
-          <TinkerDash className="font-['Inter'] text-[28px] font-[400] leading-[42px] text-[#22c55e]" />
-          <span className="font-['Inter'] text-[26px] font-[700] leading-[32px] text-[#ffffff]">
-            Tinker Dash
-          </span>
-        </div>
-        <div className="flex h-7 w-px flex-none items-start bg-[#232830]" />
-        <span className="font-['Inter'] text-[17px] font-[400] leading-[24px] text-[#e5e7eb] mobile:hidden">
-          Minecraft’s most intuitive server manager.
-        </span>
-        <div className="flex grow shrink-0 basis-0 flex-col items-start gap-2 px-2 py-2" />
-        <div className="flex h-[33px] w-[33px] flex-none items-center justify-center gap-2 rounded-[9999px] border-2 border-dashed border-[#96a2b040] bg-[#1a1e23] px-3 py-1 opacity-50">
-          <RoundDownload className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#e5e7eb]" />
-        </div>
-        <div className="flex items-center justify-end gap-2 rounded-l-[9999px] border-2 border-solid border-[#96a2b040] bg-[#1a1e23] px-3 py-1">
-          <div className="flex h-2 w-2 flex-none items-start rounded-[9999px] bg-[#96a2b0]" />
-          <span className="font-['Inter'] text-[15px] font-[500] leading-[20px] text-[#ffffff]">
-            No servers running
-          </span>
-        </div>
-        <div className="flex items-center justify-end gap-0.5 rounded-r-[9999px] border-2 border-solid border-[#96a2b040] bg-[#1a1e23] pl-3 pr-1.5 py-1">
-          <span className="font-['Inter'] text-[15px] font-[500] leading-[20px] text-[#ffffff]">
-            Selected server
-          </span>
-          <svg
-            className="font-['Inter'] text-[20px] font-[400] leading-[24px] text-[#7a828e]"
-            width="1em"
-            height="1em"
-            viewBox="0 0 24 24"
-          >
-            <path
-              d="M6.3 8.3a1 1 0 0 1 1.4 0l4.3 4.3 4.3-4.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 0 1 0-1.4"
-              fill="currentColor"
-              fillOpacity="1"
-            />
-          </svg>
-        </div>
-      </header>
-      <main className="flex w-full flex-col items-center justify-center px-6 py-12 mobile:px-4 mobile:pt-6">
+    <div className="flex h-full flex-col bg-[#0b0d10]">
+      <AppHeader
+        statusText="No servers running"
+        selectedServerLabel="Selected server"
+        selectedServerIcon="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"
+      />
+      <main className="flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto bg-[#0b0d10] px-6 py-12 mobile:px-4 mobile:pt-6">
         <div className="flex w-full flex-col items-center">
-          <nav className="flex w-full items-end justify-center gap-1.5 px-6 mobile:flex-wrap mobile:px-0 mobile:pb-2">
-            <div onClick={() => onNavigate("Connection")} className="flex items-center gap-1.5 rounded-t-xl bg-[#0f2418] px-[7px] py-1 hover:bg-[#123321] mobile:rounded-xl grow justify-center cursor-pointer">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[9999px] border border-solid border-[#4b5563] text-[12px] text-[#e5e7eb]">
-                <RoundWifi className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#e5e7eb]" />
-              </div>
-              <span className="font-['Inter'] text-[15px] font-[400] leading-[24px] text-[#e5e7eb]">
-                Connection
-              </span>
-            </div>
-            <div onClick={() => onNavigate("Server")} className="flex items-center gap-1.5 rounded-t-xl bg-[#0f2418] px-[7px] py-1 hover:bg-[#123321] mobile:rounded-xl grow justify-center cursor-pointer">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[9999px] border border-solid border-[#4b5563] text-[12px] text-[#e5e7eb]">
-                <RoundServerX1 className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#e5e7eb]" />
-              </div>
-              <span className="font-['Inter'] text-[15px] font-[400] leading-[24px] text-[#e5e7eb]">
-                Server
-              </span>
-            </div>
-            <div onClick={() => onNavigate("Mods")} className="flex items-center gap-1.5 rounded-t-xl bg-[#0f2418] px-[7px] py-1 hover:bg-[#123321] mobile:rounded-xl grow justify-center cursor-pointer">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[9999px] border border-solid border-[#4b5563] text-[12px] text-[#e5e7eb]">
-                <RoundCompass className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#e5e7eb]" />
-              </div>
-              <span className="font-['Inter'] text-[15px] font-[400] leading-[24px] text-[#e5e7eb]">
-                Mods
-              </span>
-              <div className="flex h-5 min-w-[20px] items-center justify-center rounded-[9999px] bg-[#22c55e] px-1.5">
-                <span className="font-['Inter'] text-[12px] font-[700] leading-[16px] text-[#04130a]">
-                  0
-                </span>
-              </div>
-            </div>
-            <div onClick={() => onNavigate("Files")} className="flex items-center gap-1.5 rounded-t-xl bg-[#0f2418] px-[7px] py-1 hover:bg-[#123321] mobile:rounded-xl grow justify-center cursor-pointer">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[9999px] border border-solid border-[#4b5563] text-[12px] text-[#e5e7eb]">
-                <RoundList className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#e5e7eb]" />
-              </div>
-              <span className="font-['Inter'] text-[15px] font-[400] leading-[24px] text-[#e5e7eb]">
-                Files
-              </span>
-            </div>
-            <div onClick={() => onNavigate("World")} className="flex items-center gap-1.5 rounded-t-xl bg-[#0f2418] px-[7px] py-1 hover:bg-[#123321] mobile:rounded-xl grow justify-center cursor-pointer">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[9999px] border border-solid border-[#4b5563] text-[12px] text-[#e5e7eb]">
-                <RoundLayers className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#e5e7eb]" />
-              </div>
-              <span className="font-['Inter'] text-[15px] font-[400] leading-[24px] text-[#e5e7eb]">
-                World
-              </span>
-            </div>
-            <div onClick={() => onNavigate("Players")} className="flex items-center gap-1.5 rounded-t-xl bg-[#0f2418] px-[7px] py-1 hover:bg-[#123321] mobile:rounded-xl grow justify-center cursor-pointer">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[9999px] border border-solid border-[#4b5563] text-[12px] text-[#e5e7eb]">
-                <RoundPeople className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#e5e7eb]" />
-              </div>
-              <span className="font-['Inter'] text-[15px] font-[400] leading-[24px] text-[#e5e7eb]">
-                Players
-              </span>
-            </div>
-            <div onClick={() => onNavigate("Console")} className="flex items-center gap-1.5 rounded-t-xl border-x border-t border-solid border-[#22c55e] bg-[#123321] px-[7px] py-1 shadow-[0px_12px_32px_-4px_#22c55e] mobile:rounded-xl mobile:border-b grow justify-center cursor-pointer">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[9999px] border border-solid border-[#86efac] text-[12px] text-white">
-                <RoundTerminal className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#e5e7eb]" />
-              </div>
-              <span className="font-['Inter'] text-[15px] font-[500] leading-[24px] text-[#ffffff]">
-                Console
-              </span>
-            </div>
-            <div onClick={() => onNavigate("Backups")} className="flex items-center gap-1.5 rounded-t-xl bg-[#0f2418] px-[7px] py-1 hover:bg-[#123321] mobile:rounded-xl grow justify-center cursor-pointer">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[9999px] border border-solid border-[#4b5563] text-[12px] text-[#e5e7eb]">
-                <RoundSaveAll className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#e5e7eb]" />
-              </div>
-              <span className="font-['Inter'] text-[15px] font-[400] leading-[24px] text-[#e5e7eb]">
-                Backups
-              </span>
-            </div>
-            <div onClick={() => onNavigate("Tinker")} className="flex items-center gap-1.5 rounded-t-xl bg-[#0f2418] px-[7px] py-1 hover:bg-[#123321] mobile:rounded-xl grow justify-center cursor-pointer">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[9999px] border border-solid border-[#4b5563] text-[12px] text-[#e5e7eb]">
-                <TinkerDash className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#e5e7eb]" />
-              </div>
-              <span className="font-['Inter'] text-[15px] font-[400] leading-[24px] text-[#e5e7eb]">
-                Tinker
-              </span>
-            </div>
-          </nav>
-          <section className="flex w-full flex-col items-start gap-6 rounded-3xl border border-solid border-[#1f242b] bg-[#111418] px-8 py-6 mobile:px-4">
+          <TabBar selected="console" amountOfModsInstalled="0" onNavigate={onNavigate} />
+          <section className="flex w-full flex-col items-start gap-0.5 rounded-3xl border border-solid border-[#1f242b] bg-[#111418] px-8 py-6 mobile:px-4">
             <div className="flex w-full items-center justify-between gap-4">
               <h1 className="font-['Inter'] text-[28px] font-[700] leading-[36px] text-[#ffffff]">
                 Console
@@ -145,17 +28,17 @@ function Console({ onNavigate }: PageProps) {
             </div>
             <div className="flex max-h-[448px] w-full flex-col items-start gap-1.5 rounded-[4px]">
               <div className="flex w-full items-center gap-2">
-                <div className="flex h-14 w-14 flex-none items-center justify-center rounded-xl border border-solid border-[#232830] bg-[#15191e]">
-                  <img
-                    className="h-10 w-10 flex-none object-contain"
-                    src="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"
-                  />
-                </div>
+                <ConsoleServerHeader
+                  image="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"
+                  name="Vanilla SMP"
+                  loader="Vanilla"
+                  version="1.21.1"
+                  port="25565"
+                  currentPlayers="1"
+                  maxPlayers="20"
+                />
                 <div className="flex grow shrink-0 basis-0 flex-col items-start gap-1">
-                  <div className="flex w-full items-center justify-between gap-4">
-                    <span className="font-['Inter'] text-[20px] font-[700] leading-[28px] text-[#ffffff]">
-                      Vanilla SMP
-                    </span>
+                  <div className="flex w-full items-center justify-end gap-4">
                     <div className="flex items-center gap-2 rounded-[9999px] border-2 border-solid border-[#22c55e] bg-[#0f2418] px-3 py-1">
                       <div className="flex h-2 w-2 flex-none items-start rounded-[9999px] bg-[#22c55e]" />
                       <span className="font-['Inter'] text-[15px] font-[500] leading-[20px] text-[#ffffff]">
@@ -163,9 +46,6 @@ function Console({ onNavigate }: PageProps) {
                       </span>
                     </div>
                   </div>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[16px] text-[#7a828e]">
-                    Vanilla 1.21.1 · Port 25565 · 1/20 players
-                  </span>
                 </div>
               </div>
               <div className="flex w-full items-center gap-3 mobile:flex-wrap">
@@ -210,6 +90,12 @@ function Console({ onNavigate }: PageProps) {
                       Error
                     </span>
                   </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Checkbox />
+                  <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd]">
+                    Detailed time labels
+                  </span>
                 </div>
                 <div className="flex grow shrink-0 basis-0 items-center justify-end gap-1.5">
                   <div className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] border border-solid border-[#22c55e80] bg-[#123321] text-[#86efac] hover:border-[#22c55e]">
@@ -342,223 +228,23 @@ function Console({ onNavigate }: PageProps) {
                     Enter next · Shift+Enter previous · Esc close
                   </span>
                 </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:01:58]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Starting minecraft server version 1.21.1
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:01:58]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Loading properties
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:01:58]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Default game type: SURVIVAL
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:01:59]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Starting Minecraft server on *:25565
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:01:59]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Preparing level &quot;world&quot;
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:02:02]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Preparing start region for dimension minecraft:overworld
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:02:03]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Time elapsed: 3870 ms
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:02:03]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Done (4.213s)! For help, type &quot;help&quot;
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:02:11]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [User Authenticator #1/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    UUID of player Steve is 8667ba71-b85a-4004-af54-457a9734eed7
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:02:11]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Steve[/192.168.1.24:51834] logged in with entity id 214 at
-                    (12.5, 71.0, -38.5)
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:02:11]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Steve joined the game
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-[#22c55e] bg-[#22c55e14] px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:03:27]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <div className="flex grow shrink-0 basis-0 flex-wrap items-start">
-                    <span className="font-['Inter'] text-[12px] font-[500] leading-[18px] text-[#ffffff] whitespace-pre">
-                      &lt;Steve&gt; anyone up for the{" "}
-                    </span>
-                    <span className="font-['Inter'] text-[12px] font-[600] leading-[18px] text-[#0b0d10] rounded-sm bg-[#f59e0b] px-0.5">
-                      nether
-                    </span>
-                    <span className="font-['Inter'] text-[12px] font-[500] leading-[18px] text-[#ffffff]">
-                      ?
-                    </span>
-                  </div>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-[#f7b900] bg-[#f7b9000f] px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:05:42]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[600] leading-[18px] text-[#f7b900]">
-                    [Server thread/WARN]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#fde68a]">
-                    Can&#39;t keep up! Is the server overloaded? Running 2034ms
-                    or 40 ticks behind
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-[#22c55e] bg-[#22c55e14] px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:06:10]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <div className="flex grow shrink-0 basis-0 flex-wrap items-start">
-                    <span className="font-['Inter'] text-[12px] font-[500] leading-[18px] text-[#ffffff] whitespace-pre">
-                      &lt;Alex&gt;{" "}
-                    </span>
-                    <span className="font-['Inter'] text-[12px] font-[500] leading-[18px] text-[#fcd34d] rounded-sm bg-[#f59e0b40] px-0.5">
-                      nether
-                    </span>
-                    <span className="font-['Inter'] text-[12px] font-[500] leading-[18px] text-[#ffffff] whitespace-pre">
-                      {" "}
-                      portal is at spawn
-                    </span>
-                  </div>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:07:03]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    [Rcon] Player Alex was given 64 [Diamond]
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-[#ef4444] bg-[#ef44441a] px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:08:15]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[600] leading-[18px] text-[#ef4444]">
-                    [IO-Worker-4/ERROR]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#fca5a5]">
-                    Failed to save chunk [12, -4]
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:10:00]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Saving the game (this may take a moment!)
-                  </span>
-                </div>
-                <div className="flex w-full items-start gap-2 rounded-[4px] border-l-2 border-solid border-transparent px-2 py-0.5">
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#5b636e]">
-                    [14:10:01]
-                  </span>
-                  <span className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#4ade80b3]">
-                    [Server thread/INFO]:
-                  </span>
-                  <span className="grow shrink-0 basis-0 font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#d1d5db]">
-                    Saved the game
-                  </span>
-                </div>
+                <LogEntry
+                  timestamp="[14:01:58]"
+                  source="[Server thread/INFO]:"
+                  message="Starting minecraft server version 1.21.1"
+                />
+                <LogEntry
+                  type="warn"
+                  timestamp="[14:01:59]"
+                  source="[Server thread/WARN]:"
+                  message="Can't keep up! Is the server overloaded? Running 2034ms or 40 ticks behind"
+                />
+                <LogEntry
+                  type="error"
+                  timestamp="[14:01:59]"
+                  source="[IO-Worker-4/ERROR]:"
+                  message="Failed to save chunk [12, -4]"
+                />
               </div>
               <div className="flex w-full items-center gap-2">
                 <div className="flex h-9 grow shrink-0 basis-0 items-center gap-2 rounded-b-[8px] border border-solid border-[#2a3038] bg-[#07090b] px-3 focus-within:border-[#22c55e80]">

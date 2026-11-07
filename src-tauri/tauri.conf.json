@@ -12,11 +12,14 @@
   "app": {
     "windows": [
       {
-        "title": "tinker-dash",
+        "title": "Tinker Dash",
         "width": 1280,
         "height": 720,
-        "backgroundColor": "#0b0d10",
-        "resizable": false
+        "resizable": false,
+        "maximizable": false,
+        "fullscreen": false,
+        "maximized": false,
+        "backgroundColor": "#0b0d10"
       }
     ],
     "security": {

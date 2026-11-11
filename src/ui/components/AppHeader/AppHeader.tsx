@@ -44,7 +44,7 @@ const AppHeaderRoot = React.forwardRef<HTMLElement, AppHeaderRootProps>(
         {...otherProps}
       >
         <div className="flex items-center gap-3">
-          <TinkerDash className="font-['Inter'] text-[28px] font-[400] leading-[42px] text-[#22c55e]" />
+          <TinkerDash className="font-['Inter'] text-[28px] font-[400] leading-[42px] fill-[#22C55E]" />
           <span className="font-['Inter'] text-[26px] font-[700] leading-[32px] text-[#ffffff]">
             Tinker Dash
           </span>

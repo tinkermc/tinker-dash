@@ -6,6 +6,7 @@
 
 import React from "react";
 import * as SubframeCore from "@subframe/core";
+import OutlineContentCopy from "../../icons/OutlineContentCopy";
 import RoundTimer from "../../icons/RoundTimer";
 import * as SubframeUtils from "../../utils";
 
@@ -14,6 +15,7 @@ export interface StatCardRootProps
   icon?: React.ReactNode;
   label?: React.ReactNode;
   value?: React.ReactNode;
+  showCopyButton?: boolean;
   className?: string;
 }
 
@@ -23,6 +25,7 @@ const StatCardRoot = React.forwardRef<HTMLDivElement, StatCardRootProps>(
       icon = <RoundTimer />,
       label,
       value,
+      showCopyButton = false,
       className,
       ...otherProps
     }: StatCardRootProps,
@@ -31,7 +34,7 @@ const StatCardRoot = React.forwardRef<HTMLDivElement, StatCardRootProps>(
     return (
       <div
         className={SubframeUtils.twClassNames(
-          "flex h-full flex-col items-start gap-0.5 rounded-[8px] border border-solid border-[#232830] bg-[#0f1216] px-3 py-2",
+          "group/ea733f80 flex h-full flex-col items-start gap-0.5 rounded-[8px] border border-solid border-[#232830] bg-[#0f1216] px-3 py-2",
           className
         )}
         ref={ref}
@@ -49,11 +52,26 @@ const StatCardRoot = React.forwardRef<HTMLDivElement, StatCardRootProps>(
             </span>
           ) : null}
         </div>
-        {value ? (
-          <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#ffffff]">
-            {value}
-          </span>
-        ) : null}
+        <div
+          className={SubframeUtils.twClassNames(
+            "flex flex-col items-start gap-0.5",
+            { "flex-row gap-[3px]": showCopyButton }
+          )}
+        >
+          {value ? (
+            <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#ffffff]">
+              {value}
+            </span>
+          ) : null}
+          <div
+            className={SubframeUtils.twClassNames(
+              "hidden h-6 w-6 flex-none items-center justify-center rounded-[6px] border border-solid border-[#2a3038] bg-[#1a1e23] hover:border-[#3a414b]",
+              { flex: showCopyButton }
+            )}
+          >
+            <OutlineContentCopy className="font-['Inter'] text-[13px] font-[400] leading-[16px] text-[#e5e7eb]" />
+          </div>
+        </div>
       </div>
     );
   }

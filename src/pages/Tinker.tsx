@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { CreateUserDialog } from "@/ui/components/CreateUserDialog";
+import { closeMenu, openMenu } from "@/ui/menu";
 import { AppHeader } from "@/ui/components/AppHeader";
 import { TabBar } from "@/ui/components/TabBar";
 import type { PageProps } from "./types";
@@ -24,10 +24,24 @@ import RoundServerX1 from "@/ui/icons/RoundServerX1";
 import RoundStarFilled from "@/ui/icons/RoundStarFilled";
 import RoundUpgrade from "@/ui/icons/RoundUpgrade";
 import Sort from "@/ui/icons/Sort";
+import { CreateRoleDialog } from "@/ui/index";
 
 function Tinker({ onNavigate }: PageProps) {
-  const [showCreateUser, setShowCreateUser] = useState(false);
-const openCreateUser = () => setShowCreateUser(true);
+  const openCreateUser = () =>
+    openMenu(
+      <CreateUserDialog
+        onClose={closeMenu}
+        className="max-w-full"
+      />,
+    );
+      const openCreateRole = () =>
+    openMenu(
+      <CreateRoleDialog
+        onClose={closeMenu}
+        className="max-w-full"
+      />,
+    );
+
   return (
     <div className="flex h-full flex-col bg-[#0b0d10]">
       <AppHeader
@@ -53,13 +67,14 @@ const openCreateUser = () => setShowCreateUser(true);
                 </p>
               </div>
               <div className="flex items-center gap-2 mobile:w-full mobile:flex-none">
-                <div className="flex items-center justify-center gap-1 rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] px-3 py-1.5 hover:bg-[#232830] mobile:grow mobile:shrink-0 mobile:basis-0">
+                <button className="flex items-center justify-center gap-1 rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] px-3 py-1.5 hover:bg-[#232830] mobile:grow mobile:shrink-0 mobile:basis-0" type="button" onClick={openCreateRole}>
                   <RoundNewLabel className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#e5e7eb]" />
                   <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#e5e7eb]">
                     Create role
                   </span>
-                </div>
-                <div
+                </button>
+                <button
+                  type="button"
                   onClick={openCreateUser}
                   className="flex items-center justify-center gap-1 rounded-[8px] border border-solid border-[#22c55e] bg-[#22c55e] px-3 py-1.5 hover:bg-[#16a34a] mobile:grow mobile:shrink-0 mobile:basis-0"
                 >
@@ -67,7 +82,7 @@ const openCreateUser = () => setShowCreateUser(true);
                   <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#04130a]">
                     Create user
                   </span>
-                </div>
+                </button>
               </div>
             </div>
             <div className="w-full items-start gap-3 grid grid-cols-4 mobile:grid mobile:grid-cols-2">
@@ -612,17 +627,6 @@ const openCreateUser = () => setShowCreateUser(true);
             </div>
           </section>
         </div>
-        {showCreateUser && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4">
-            <CreateUserDialog
-              onClose={() => setShowCreateUser(false)}
-             className="max-h-[90vh] max-w-full overflow-y-auto"
-              cancelButton={
-                <button onClick={() => setShowCreateUser(false)}>Cancel</button>
-              }
-            />
-          </div>
-        )}
       </main>
     </div>
   );

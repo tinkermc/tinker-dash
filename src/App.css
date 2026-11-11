@@ -10,3 +10,22 @@ body,
   overscroll-behavior: none; /* stops the macOS rubber-band bounce */
   background-color: #0b0d10; /* matches the app background if anything peeks through */
 }
+
+@font-face {
+  font-family: 'Obel Mono';
+  src: url('/src/assets/fonts/ObelMono-VF.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Obel Mono Italic';
+  src: url('/src/assets/fonts/ObelMono-Italic-VF.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+}
+
+/* Force the webview to preserve spaces at the end of text strings */
+.subframe-text-class, label, span {
+  white-space: pre-wrap; 
+}

@@ -14,7 +14,15 @@ export interface PrimaryButtonRootProps
   tooltip?: React.ReactNode;
   icon?: React.ReactNode;
   text?: React.ReactNode;
-  color?: "green" | "red" | "gray" | "purple" | "blue" | "gray-transparent";
+  color?:
+    | "green"
+    | "red"
+    | "gray"
+    | "purple"
+    | "blue"
+    | "gray-transparent"
+    | "gray-dangerous"
+    | "gray-success";
   disabled?: boolean;
   className?: string;
 }
@@ -40,6 +48,10 @@ const PrimaryButtonRoot = React.forwardRef<
         "group/fd8dbcfe flex items-center justify-center gap-1 rounded-[8px] border border-solid border-[#22c55e] bg-[#22c55e] px-3 py-1 hover:bg-[#16a34a]",
         {
           "opacity-50": disabled,
+          "border border-solid border-[#2a3038] bg-[#1a1e23] hover:border-[#16a34a] hover:bg-[#101c13]":
+            color === "gray-success",
+          "border border-solid border-[#2a3038] bg-[#1a1e23] hover:border-[#ef4444] hover:bg-[#2a1215]":
+            color === "gray-dangerous",
           "border border-solid border-[#2a3038] bg-transparent shadow-[0px_12px_32px_-4px_#2a303880] bg-gradient-to-b from-[#1A1E23] to-[#1E2530]":
             color === "gray-transparent",
           "border border-solid border-[#0173d4] bg-transparent shadow-[0px_12px_32px_-4px_#0173d480] bg-gradient-to-b from-[#00c6ff] to-[#0072ff] hover:from-[#00b4e6] hover:to-[#0062db]":
@@ -59,13 +71,16 @@ const PrimaryButtonRoot = React.forwardRef<
       {icon ? (
         <SubframeCore.IconWrapper
           className={SubframeUtils.twClassNames(
-            "font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#04130a]",
+            "font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#04130a] select-none",
             {
               "text-[#ffffff]":
+                color === "gray-success" ||
+                color === "gray-dangerous" ||
                 color === "gray-transparent" ||
                 color === "blue" ||
                 color === "purple" ||
-                color === "gray",
+                color === "gray" ||
+                color === "red",
             }
           )}
         >
@@ -75,13 +90,16 @@ const PrimaryButtonRoot = React.forwardRef<
       {text ? (
         <span
           className={SubframeUtils.twClassNames(
-            "font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#04130a]",
+            "font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#04130a] select-none",
             {
               "text-[#ffffff]":
+                color === "gray-success" ||
+                color === "gray-dangerous" ||
                 color === "gray-transparent" ||
                 color === "blue" ||
                 color === "purple" ||
-                color === "gray",
+                color === "gray" ||
+                color === "red",
             }
           )}
         >

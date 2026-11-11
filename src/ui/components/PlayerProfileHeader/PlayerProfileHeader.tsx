@@ -90,10 +90,14 @@ const PlayerProfileHeaderRoot = React.forwardRef<
                 }
               )}
             />
-            {status === "timed-out" ? (
-              <RoundHourglassEmpty className="inline-flex font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#ff7b00]" />
-            ) : status === "banned" ? (
-              <Hammer className="inline-flex font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#ef4444]" />
+            <RoundHourglassEmpty
+              className={SubframeUtils.twClassNames(
+                "hidden font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#ff7b00]",
+                { "inline-flex": status === "timed-out" }
+              )}
+            />
+            {status === "banned" ? (
+              <Hammer className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#ef4444]" />
             ) : null}
             <span
               className={SubframeUtils.twClassNames(

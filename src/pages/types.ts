@@ -12,3 +12,16 @@ export type TabId =
 export interface PageProps {
   onNavigate: (tab: TabId) => void;
 }
+
+export interface ConnectionSettings {
+  address: string;
+  port: string;
+  token: string;
+  allowSelfSignedCertificates: boolean;
+  autoConnect: boolean;
+}
+
+export interface ConnectionPageProps extends PageProps {
+  settings: ConnectionSettings;
+  onSettingsChange: (settings: ConnectionSettings) => void;
+}

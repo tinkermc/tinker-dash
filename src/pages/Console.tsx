@@ -41,7 +41,7 @@ function Console({ onNavigate }: PageProps) {
                   <div className="flex w-full items-center justify-end gap-4">
                     <div className="flex items-center gap-2 rounded-[9999px] border-2 border-solid border-[#22c55e] bg-[#0f2418] px-3 py-1">
                       <div className="flex h-2 w-2 flex-none items-start rounded-[9999px] bg-[#22c55e]" />
-                      <span className="font-['Inter'] text-[15px] font-[500] leading-[20px] text-[#ffffff]">
+                      <span className="font-['Inter'] text-[15px] font-[500] leading-[20px] text-[#ffffff] select-none">
                         Running
                       </span>
                     </div>
@@ -259,11 +259,11 @@ function Console({ onNavigate }: PageProps) {
                   />
                 </div>
                 <div className="flex h-9 items-center gap-1.5 rounded-[8px] border border-solid border-[#22c55e] bg-[#22c55e] px-4 text-[#04130a] hover:bg-[#16a34a]">
-                  <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#04130a]">
+                  <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#04130a] select-none">
                     Send
                   </span>
                   <svg
-                    className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#171717]"
+                    className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#171717] select-none"
                     width="1em"
                     height="1em"
                     viewBox="0 0 24 24"

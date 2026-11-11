@@ -60,7 +60,7 @@ const TabRoot = React.forwardRef<HTMLDivElement, TabRootProps>(function TabRoot(
           ) : null}
         </div>
         {title ? (
-          <span className="font-['Inter'] text-[15px] font-[500] leading-[24px] text-[#ffffff]">
+          <span className="font-['Inter'] text-[15px] font-[500] leading-[24px] text-[#ffffff] select-none">
             {title}
           </span>
         ) : null}

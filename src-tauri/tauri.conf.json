@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tinker-dash",
+  "productName": "Tinker Dash",
   "version": "0.1.0",
   "identifier": "com.tinker.tinker-dash",
   "build": {

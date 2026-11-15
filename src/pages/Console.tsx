@@ -1,285 +1,436 @@
-
-
-
-import { AppHeader } from "@/ui/components/AppHeader";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/ui/components/Checkbox";
-import { ConsoleServerHeader } from "@/ui/components/ConsoleServerHeader";
+import { EmptyState } from "@/ui/components/EmptyState";
+import { IconButton } from "@/ui/components/IconButton";
 import { LogEntry } from "@/ui/components/LogEntry";
+import { PageShell } from "@/ui/components/PageShell";
+import { PrimaryButton } from "@/ui/components/PrimaryButton";
+import { SegmentedControl } from "@/ui/components/SegmentedControl";
+import { SelectField } from "@/ui/components/SelectField";
+import { StatusPill } from "@/ui/components/StatusPill";
 import { TabBar } from "@/ui/components/TabBar";
-import type { PageProps } from "./types";
+import OutlineContentCopy from "@/ui/icons/OutlineContentCopy";
+import RoundAdd from "@/ui/icons/RoundAdd";
+import RoundDelete from "@/ui/icons/RoundDelete";
+import RoundDownload from "@/ui/icons/RoundDownload";
+import RoundPlayArrow from "@/ui/icons/RoundPlayArrow";
 import RoundSearch from "@/ui/icons/RoundSearch";
+import RoundSend from "@/ui/icons/RoundSend";
+import RoundTerminal from "@/ui/icons/RoundTerminal";
+import { ConnectedHeader } from "../components/ConnectedHeader";
+import { ServerGate } from "../components/PageStates";
+import { usePrompt } from "../components/PromptDialog";
+import { useAgent } from "../lib/AgentContext";
+import { errorMessage } from "../lib/agent";
+import type { ConsoleLine } from "../lib/ConsoleContext";
+import { copyText, downloadText } from "../lib/external";
+import { useHostStats, useSelectedServer } from "../lib/hooks";
+import { formatClock, formatGB } from "../lib/minecraft";
+import { notify } from "../lib/notify";
+import { readPref, writePref } from "../lib/prefs";
+import type { PageProps } from "./types";
+
+type Filter = "all" | "info" | "warn" | "error";
+
+// Buttons under the command box. A trailing "…" means "fill in the rest".
+const QUICK_COMMANDS = ["save-all", "list", "time set day", "weather clear", "say …", "whitelist add …"];
+
+const HISTORY_KEY = "tinker.console.history";
+const CUSTOM_KEY = "tinker.console.quickCommands";
+const DETAILED_KEY = "tinker.console.detailedTimestamps";
+
+function timestampFor(line: ConsoleLine, detailed: boolean): string | undefined {
+  if (detailed) return `[${formatClock(line.at, true)}]`;
+  if (line.time) return `[${line.time}]`;
+  if (line.source) return `[${formatClock(line.at)}]`;
+  return undefined; // stack-trace lines: no timestamp, like the real log
+}
 
 function Console({ onNavigate }: PageProps) {
+  const { startServer, pending } = useAgent();
+  const { server, status, console: live } = useSelectedServer();
+  const stats = useHostStats();
+  const [prompt, ask] = usePrompt();
+
+  const [filter, setFilter] = useState<Filter>("all");
+  const [detailed, setDetailed] = useState(() => readPref(DETAILED_KEY, false));
+  const [query, setQuery] = useState("");
+  const [command, setCommand] = useState("");
+  const [history, setHistory] = useState<string[]>(() => readPref<string[]>(HISTORY_KEY, []));
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
+  const [custom, setCustom] = useState<string[]>(() => readPref<string[]>(CUSTOM_KEY, []));
+  const [atBottom, setAtBottom] = useState(true);
+  const logRef = useRef<HTMLDivElement>(null);
+  const commandRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const running = server?.running ?? false;
+  const online = Object.values(live.state.players).filter((p) => p.online).length;
+  const q = query.trim().toLowerCase();
+
+  const visible = useMemo(
+    () =>
+      live.lines.filter(
+        (line) =>
+          line.id > live.clearedBefore &&
+          (filter === "all" || line.level === filter) &&
+          (!q || line.raw.toLowerCase().includes(q)),
+      ),
+    [live.lines, live.clearedBefore, filter, q],
+  );
+
+  // Stay pinned to the newest line unless the user scrolled up.
+  useLayoutEffect(() => {
+    const el = logRef.current;
+    if (el && atBottom) el.scrollTop = el.scrollHeight;
+  }, [visible, atBottom]);
+
+  // Ctrl+F / Cmd+F jumps to "Find in logs".
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  function jumpToLatest() {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    setAtBottom(true);
+  }
+
+  async function submit(text: string) {
+    const cmd = text.trim().replace(/^\//, "");
+    if (!cmd) return;
+    if (!running) {
+      notify.error("The server isn't running", "Start it first, then send commands.");
+      return;
+    }
+    setHistory((old) => {
+      const next = [...old.filter((c) => c !== cmd), cmd].slice(-50);
+      writePref(HISTORY_KEY, next);
+      return next;
+    });
+    setHistoryIndex(null);
+    setCommand("");
+    jumpToLatest();
+    try {
+      await live.send(cmd);
+    } catch (err) {
+      notify.error("Command not sent", errorMessage(err));
+    }
+  }
+
+  function runQuick(item: string) {
+    if (item.endsWith("…")) {
+      setCommand(item.slice(0, -1));
+      commandRef.current?.focus();
+    } else {
+      void submit(item);
+    }
+  }
+
+  function addQuickCommand() {
+    ask({
+      title: "Add a quick command",
+      description: "It's saved on this computer and shows up next to the others. Right-click it to remove it.",
+      icon: <RoundTerminal />,
+      confirmText: "Add",
+      confirmIcon: <RoundAdd />,
+      input: {
+        title: "Command",
+        placeholder: "e.g. gamerule keepInventory true",
+        required: true,
+        helper: "End it with … to fill the box instead of sending right away.",
+      },
+      onConfirm: (value) => {
+        const cmd = value.replace(/^\//, "");
+        setCustom((old) => {
+          const next = [...old.filter((c) => c !== cmd), cmd];
+          writePref(CUSTOM_KEY, next);
+          return next;
+        });
+      },
+    });
+  }
+
+  function removeQuickCommand(cmd: string) {
+    setCustom((old) => {
+      const next = old.filter((c) => c !== cmd);
+      writePref(CUSTOM_KEY, next);
+      return next;
+    });
+  }
+
+  async function copyLog() {
+    try {
+      await copyText(visible.map((l) => l.raw).join("\n"));
+      notify.success(`Copied ${visible.length} line${visible.length === 1 ? "" : "s"}`);
+    } catch (err) {
+      notify.error("Couldn't copy", errorMessage(err));
+    }
+  }
+
+  function downloadLog() {
+    if (!server) return;
+    const stamp = formatClock(Date.now(), true).replace(/[: ]/g, "-");
+    downloadText(`${server.id}-console-${stamp}.txt`, visible.map((l) => l.raw).join("\n"));
+  }
+
+  const statBox = "flex flex-col items-start gap-1 self-stretch rounded-xl border border-solid border-[#1f242b] bg-[#12151a] px-4 py-3";
+  const statLabel = "font-['Inter'] text-[12px] font-[500] leading-[16px] text-[#7a828e]";
+  const statValue = "font-['Inter'] text-[20px] font-[700] leading-[28px] text-[#ffffff]";
+  const quickCommands = [...QUICK_COMMANDS, ...custom];
+
   return (
-    <div className="flex h-full flex-col bg-[#0b0d10]">
-      <AppHeader
-        statusText="No servers running"
-        selectedServerLabel="Selected server"
-        selectedServerIcon="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"
-      />
-      <main className="flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto bg-[#0b0d10] px-6 py-12 mobile:px-4 mobile:pt-6">
-        <div className="flex w-full flex-col items-center">
-          <TabBar selected="console" amountOfModsInstalled="0" onNavigate={onNavigate} />
-          <section className="flex w-full flex-col items-start gap-0.5 rounded-3xl border border-solid border-[#1f242b] bg-[#111418] px-8 py-6 mobile:px-4">
-            <div className="flex w-full items-center justify-between gap-4">
-              <h1 className="font-['Inter'] text-[28px] font-[700] leading-[36px] text-[#ffffff]">
-                Console
-              </h1>
-            </div>
-            <div className="flex max-h-[448px] w-full flex-col items-start gap-1.5 rounded-[4px]">
-              <div className="flex w-full items-center gap-2">
-                <ConsoleServerHeader
-                  image="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"
-                  name="Vanilla SMP"
-                  loader="Vanilla"
-                  version="1.21.1"
-                  port="25565"
-                  currentPlayers="1"
-                  maxPlayers="20"
-                />
-                <div className="flex grow shrink-0 basis-0 flex-col items-start gap-1">
-                  <div className="flex w-full items-center justify-end gap-4">
-                    <div className="flex items-center gap-2 rounded-[9999px] border-2 border-solid border-[#22c55e] bg-[#0f2418] px-3 py-1">
-                      <div className="flex h-2 w-2 flex-none items-start rounded-[9999px] bg-[#22c55e]" />
-                      <span className="font-['Inter'] text-[15px] font-[500] leading-[20px] text-[#ffffff] select-none">
-                        Running
-                      </span>
-                    </div>
-                  </div>
+    <div className="flex w-full flex-col items-start bg-[#0b0d10] min-h-full font-['Inter']">
+      <PageShell
+        header={<ConnectedHeader />}
+        tabs={<TabBar selected="console" onNavigate={onNavigate} />}
+        title="Console"
+        subtitle={server ? `Live server output and commands for ${server.name}.` : "Live server output and commands."}
+        actions={server ? <StatusPill variant={status.variant} label={status.label} /> : undefined}
+      >
+        <ServerGate>
+          {server && (
+            <>
+              <div className="w-full items-start gap-3 grid grid-cols-4 mobile:grid mobile:grid-cols-2">
+                <div className={statBox} title="Needs an Agent update">
+                  <span className={statLabel}>TPS</span>
+                  <span className="font-['Inter'] text-[20px] font-[700] leading-[28px] text-[#7a828e]">—</span>
+                </div>
+                <div className={statBox} title="The whole server PC">
+                  <span className={statLabel}>Host CPU</span>
+                  <span className={statValue}>{stats ? `${Math.round(stats.cpuPercent)}%` : "—"}</span>
+                </div>
+                <div className={statBox} title="The whole server PC">
+                  <span className={statLabel}>Host memory</span>
+                  <span className={statValue}>
+                    {stats ? `${formatGB(stats.memUsedBytes)} / ${formatGB(stats.memTotalBytes)} GB` : "—"}
+                  </span>
+                </div>
+                <div className={statBox}>
+                  <span className={statLabel}>Players</span>
+                  <span className={statValue}>{running ? `${online} / ${live.state.maxPlayers ?? "?"}` : "—"}</span>
                 </div>
               </div>
-              <div className="flex w-full items-center gap-3 mobile:flex-wrap">
-                <div className="flex h-8 w-56 flex-none items-center justify-between rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] px-2.5 focus-within:border-[#22c55e80] mobile:grow mobile:shrink-0 mobile:basis-0">
-                  <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#7a828e]">
-                    Log-11/1/2026
-                  </span>
-                  <svg
-                    className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#7a828e]"
-                    width="1em"
-                    height="1em"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M6.3 8.3a1 1 0 0 1 1.4 0l4.3 4.3 4.3-4.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 0 1 0-1.4"
-                      fill="currentColor"
-                      fillOpacity="1"
+              <div className="flex w-full flex-wrap items-center gap-3">
+                <SelectField
+                  className="h-auto w-48 flex-none mobile:grow mobile:shrink-0 mobile:basis-0"
+                  label=""
+                  placeholder="Live console"
+                  helperText=""
+                  disabled={true}
+                />
+                <SegmentedControl>
+                  {(["all", "info", "warn", "error"] as const).map((f) => (
+                    <SegmentedControl.Item
+                      key={f}
+                      label={f === "all" ? "All" : f === "info" ? "Info" : f === "warn" ? "Warn" : "Error"}
+                      selected={filter === f}
+                      onClick={() => setFilter(f)}
                     />
-                  </svg>
-                </div>
-                <div className="flex items-center gap-0.5 rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] px-0.5 py-0.5">
-                  <div className="flex items-center rounded-[6px] border border-solid border-[#22c55e80] bg-[#123321] px-2.5 py-0.5">
-                    <span className="font-['Inter'] text-[13px] font-[500] leading-[20px] text-[#ffffff]">
-                      All
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 rounded-[6px] border border-solid border-transparent px-2.5 py-0.5 hover:bg-[#232830]">
-                    <div className="flex h-1.5 w-1.5 flex-none items-start rounded-[9999px] bg-[#4ade80]" />
-                    <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd]">
-                      Info
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 rounded-[6px] border border-solid border-transparent px-2.5 py-0.5 hover:bg-[#232830]">
-                    <div className="flex h-1.5 w-1.5 flex-none items-start rounded-[9999px] bg-[#f7b900]" />
-                    <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd]">
-                      Warn
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 rounded-[6px] border border-solid border-transparent px-2.5 py-0.5 hover:bg-[#232830]">
-                    <div className="flex h-1.5 w-1.5 flex-none items-start rounded-[9999px] bg-[#ef4444]" />
-                    <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd]">
-                      Error
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Checkbox />
-                  <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd]">
-                    Detailed time labels
+                  ))}
+                </SegmentedControl>
+                <div
+                  className="flex cursor-pointer items-center gap-1.5"
+                  onClick={() =>
+                    setDetailed((on) => {
+                      writePref(DETAILED_KEY, !on);
+                      return !on;
+                    })
+                  }
+                >
+                  <Checkbox checked={detailed} />
+                  <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd] select-none">
+                    Detailed timestamps
                   </span>
                 </div>
-                <div className="flex grow shrink-0 basis-0 items-center justify-end gap-1.5">
-                  <div className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] border border-solid border-[#22c55e80] bg-[#123321] text-[#86efac] hover:border-[#22c55e]">
-                    <svg
-                      className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#86efac]"
-                      width="1em"
-                      height="1em"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M11 4a1 1 0 0 1 2 0v9.59l3.3-3.3a1 1 0 1 1 1.4 1.42l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 1 1 1.4-1.42l3.3 3.3z"
-                        fill="currentColor"
-                        fillOpacity="1"
-                      />
-                      <rect
-                        x="5"
-                        y="18.5"
-                        width="14"
-                        height="2"
-                        rx="1"
-                        ry="1"
-                        fill="currentColor"
-                        fillOpacity="1"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] text-[#aeb4bd] hover:bg-[#232830]">
-                    <svg
-                      className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#aeb4bd]"
-                      width="1em"
-                      height="1em"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M9 2h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2m0 2v12h9V4zM4 7a1 1 0 0 1 1 1v12h10a1 1 0 1 1 0 2H5a2 2 0 0 1-2-2V8a1 1 0 0 1 1-1"
-                        fill="currentColor"
-                        fillOpacity="1"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] text-[#aeb4bd] hover:bg-[#232830]">
-                    <svg
-                      className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#aeb4bd]"
-                      width="1em"
-                      height="1em"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M9 3a1 1 0 0 0-1 1v1H4a1 1 0 0 0 0 2h1v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7h1a1 1 0 1 0 0-2h-4V4a1 1 0 0 0-1-1zM7 7h10v12H7zm3 2a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1m4 0a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1"
-                        fill="currentColor"
-                        fillOpacity="1"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] hover:bg-[#232830]">
-                    <RoundSearch className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#aeb4bd]" />
-                  </div>
-                </div>
-              </div>
-              <div className="flex w-full flex-col items-start rounded-t-[10px] border border-solid border-[#1f242b] bg-[#07090b] px-4 py-3 overflow-auto relative mobile:h-[420px] mobile:flex-none">
-                <div className="flex w-[360px] flex-col items-end gap-1 absolute top-3 right-3 z-10 mobile:absolute mobile:right-3 mobile:top-3 mobile:z-10 mobile:w-[calc(100%-24px)]">
-                  <div className="flex w-full items-center gap-1.5 rounded-[6px] border border-solid border-[#2a2f36] bg-[#16191e] px-2 py-1.5 shadow-[0px_8px_24px_0px_#00000073]">
+                <div className="flex grow shrink-0 basis-0 items-center justify-end gap-2 mobile:justify-start">
+                  <div className="flex h-8 w-56 flex-none items-center gap-2 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-2.5 focus-within:border-[#22c55e]">
                     <RoundSearch className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#7a828e]" />
-                    <div className="flex h-6 grow shrink-0 basis-0 items-center rounded-[4px] border border-solid border-[#22c55e] bg-[#0b0d10] px-1.5">
-                      <input
-                        className="grow shrink-0 basis-0 self-stretch font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#e5e7eb] outline-none placeholder:text-[#5b636e]"
-                        placeholder="Find in logs"
-                        value="nether"
-                        type="text"
-                      />
-                    </div>
-                    <span className="whitespace-nowrap font-['Inter'] text-[12px] font-[400] leading-[16px] text-[#7a828e]">
-                      1 of 2
-                    </span>
-                    <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[4px] border border-solid border-transparent hover:bg-[#232830]">
-                      <span className="font-['Inter'] text-[11px] font-[500] leading-[16px] text-[#aeb4bd]">
-                        Aa
-                      </span>
-                    </div>
-                    <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[4px] border border-solid border-transparent hover:bg-[#232830]">
-                      <span className="font-['Inter'] text-[11px] font-[500] leading-[16px] text-[#aeb4bd]">
-                        .*
-                      </span>
-                    </div>
-                    <div className="flex h-4 w-px flex-none items-start bg-[#2a2f36]" />
-                    <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[4px] hover:bg-[#232830]">
-                      <svg
-                        className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#aeb4bd]"
-                        width="1em"
-                        height="1em"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M6.7 15.7a1 1 0 0 1-1.4-1.4l6-6a1 1 0 0 1 1.4 0l6 6a1 1 0 0 1-1.4 1.4L12 10.4z"
-                          fill="currentColor"
-                          fillOpacity="1"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[4px] hover:bg-[#232830]">
-                      <svg
-                        className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#aeb4bd]"
-                        width="1em"
-                        height="1em"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M6.7 8.3a1 1 0 0 0-1.4 1.4l6 6a1 1 0 0 0 1.4 0l6-6a1 1 0 0 0-1.4-1.4L12 13.6z"
-                          fill="currentColor"
-                          fillOpacity="1"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex h-6 w-6 flex-none items-center justify-center rounded-[4px] hover:bg-[#232830]">
-                      <svg
-                        className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#aeb4bd]"
-                        width="1em"
-                        height="1em"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M6.3 6.3a1 1 0 0 1 1.4 0l4.3 4.3 4.3-4.3a1 1 0 1 1 1.4 1.4L13.4 12l4.3 4.3a1 1 0 0 1-1.4 1.4L12 13.4l-4.3 4.3a1 1 0 0 1-1.4-1.4l4.3-4.3-4.3-4.3a1 1 0 0 1 0-1.4"
-                          fill="currentColor"
-                          fillOpacity="1"
-                        />
-                      </svg>
-                    </div>
+                    <input
+                      ref={searchRef}
+                      className="min-w-0 grow shrink-0 basis-0 self-stretch bg-transparent font-['Inter'] text-[13px] font-[400] leading-[18px] text-[#e5e7eb] outline-none placeholder:text-[#5b636e]"
+                      placeholder="Find in logs"
+                      value={query}
+                      type="text"
+                      onChange={(event) => setQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") setQuery("");
+                      }}
+                    />
                   </div>
-                  <span className="font-['Inter'] text-[10px] font-[400] leading-[14px] text-[#5b636e]">
-                    Enter next · Shift+Enter previous · Esc close
-                  </span>
-                </div>
-                <LogEntry
-                  timestamp="[14:01:58]"
-                  source="[Server thread/INFO]:"
-                  message="Starting minecraft server version 1.21.1"
-                />
-                <LogEntry
-                  type="warn"
-                  timestamp="[14:01:59]"
-                  source="[Server thread/WARN]:"
-                  message="Can't keep up! Is the server overloaded? Running 2034ms or 40 ticks behind"
-                />
-                <LogEntry
-                  type="error"
-                  timestamp="[14:01:59]"
-                  source="[IO-Worker-4/ERROR]:"
-                  message="Failed to save chunk [12, -4]"
-                />
-              </div>
-              <div className="flex w-full items-center gap-2">
-                <div className="flex h-9 grow shrink-0 basis-0 items-center gap-2 rounded-b-[8px] border border-solid border-[#2a3038] bg-[#07090b] px-3 focus-within:border-[#22c55e80]">
-                  <span className="font-['Inter'] text-[14px] font-[700] leading-[20px] text-[#22c55e]">
-                    &gt;
-                  </span>
-                  <input
-                    className="grow shrink-0 basis-0 self-stretch font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#e5e7eb] outline-none placeholder:text-[#5b636e]"
-                    placeholder="Enter a command (e.g. /say Hello)"
-                    value=""
-                    type="text"
+                  <IconButton
+                    className="h-8 w-8 flex-none cursor-pointer"
+                    title="Download log"
+                    icon={<RoundDownload />}
+                    color="gray"
+                    onClick={downloadLog}
+                  />
+                  <IconButton
+                    className="h-8 w-8 flex-none cursor-pointer"
+                    title="Copy log"
+                    icon={<OutlineContentCopy />}
+                    color="gray"
+                    onClick={() => void copyLog()}
+                  />
+                  <IconButton
+                    className="h-8 w-8 flex-none cursor-pointer"
+                    title="Clear console (doesn't delete log files)"
+                    icon={<RoundDelete />}
+                    color="gray-dangerous"
+                    onClick={live.clear}
                   />
                 </div>
-                <div className="flex h-9 items-center gap-1.5 rounded-[8px] border border-solid border-[#22c55e] bg-[#22c55e] px-4 text-[#04130a] hover:bg-[#16a34a]">
-                  <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#04130a] select-none">
-                    Send
-                  </span>
-                  <svg
-                    className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#171717] select-none"
-                    width="1em"
-                    height="1em"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="m3.4 20.4 18.45-7.9a.5.5 0 0 0 0-.92L3.4 3.6a.5.5 0 0 0-.7.6L5 11l9 1-9 1-2.3 6.8a.5.5 0 0 0 .7.6"
-                      fill="currentColor"
-                      fillOpacity="1"
+              </div>
+              <div className="relative w-full rounded-xl border border-solid border-[#1f242b] bg-[#07090b]">
+                <div
+                  ref={logRef}
+                  className="flex h-[min(60vh,640px)] min-h-[440px] w-full flex-col items-start gap-0.5 overflow-auto px-3 py-3"
+                  onScroll={(event) => {
+                    const el = event.currentTarget;
+                    setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 24);
+                  }}
+                >
+                  {visible.length > 0 ? (
+                    visible.map((line) => (
+                      <LogEntry
+                        key={line.id}
+                        className={line.local ? "bg-[#22c55e0d]" : undefined}
+                        type={line.level}
+                        timestamp={timestampFor(line, detailed)}
+                        source={line.source ?? undefined}
+                        message={line.message || " "}
+                      />
+                    ))
+                  ) : !running && live.lines.length === 0 ? (
+                    <EmptyState
+                      className="my-auto"
+                      variant="disconnected"
+                      icon={<RoundTerminal />}
+                      title={`${server.name} is stopped`}
+                      description="Start it to see its live output here."
+                      actions={
+                        <PrimaryButton
+                          icon={<RoundPlayArrow />}
+                          text={pending[server.id] === "starting" ? "Starting…" : "Start server"}
+                          disabled={pending[server.id] !== undefined}
+                          onClick={() => {
+                            if (pending[server.id] === undefined) void startServer(server.id);
+                          }}
+                        />
+                      }
                     />
-                  </svg>
+                  ) : (
+                    <EmptyState
+                      className="my-auto"
+                      variant="disconnected"
+                      icon={<RoundSearch />}
+                      title={live.lines.length === 0 ? "Waiting for output…" : "No lines to show"}
+                      description={
+                        live.lines.length === 0
+                          ? "New lines appear here as soon as the server prints them."
+                          : q || filter !== "all"
+                            ? "Nothing matches your filter or search."
+                            : "You cleared the console. New lines will show up here."
+                      }
+                    />
+                  )}
+                </div>
+                {!atBottom && visible.length > 0 ? (
+                  <div
+                    className="flex cursor-pointer items-center gap-1.5 rounded-[9999px] border border-solid border-[#22c55e80] bg-[#0f2418] px-3 py-1.5 shadow-[0px_8px_24px_0px_#00000080] absolute bottom-3 right-3 hover:bg-[#123321]"
+                    onClick={jumpToLatest}
+                  >
+                    <RoundDownload className="font-['Inter'] text-[14px] font-[400] leading-[16px] text-[#86efac]" />
+                    <span className="font-['Inter'] text-[12px] font-[600] leading-[16px] text-[#86efac]">Jump to latest</span>
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex w-full flex-col items-start gap-3">
+                <div className="flex w-full items-center gap-2">
+                  <div className="flex h-10 grow shrink-0 basis-0 items-center gap-2 rounded-[8px] border border-solid border-[#2a3038] bg-[#07090b] px-3 focus-within:border-[#22c55e]">
+                    <span className="font-['Obel_Mono_Italic'] text-[14px] font-[700] leading-[20px] text-[#22c55e]">&gt;</span>
+                    <input
+                      ref={commandRef}
+                      className="min-w-0 grow shrink-0 basis-0 self-stretch bg-transparent font-['Obel_Mono'] text-[13px] font-[400] leading-[20px] text-[#e5e7eb] outline-none placeholder:text-[#5b636e]"
+                      placeholder={running ? "Type a command, e.g. say Hello everyone" : "Start the server to send commands"}
+                      value={command}
+                      type="text"
+                      spellCheck={false}
+                      autoComplete="off"
+                      onChange={(event) => {
+                        setCommand(event.target.value);
+                        setHistoryIndex(null);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void submit(event.currentTarget.value);
+                        } else if (event.key === "ArrowUp" && history.length > 0) {
+                          event.preventDefault();
+                          const index = historyIndex === null ? history.length - 1 : Math.max(0, historyIndex - 1);
+                          setHistoryIndex(index);
+                          setCommand(history[index]);
+                        } else if (event.key === "ArrowDown" && historyIndex !== null) {
+                          event.preventDefault();
+                          const index = historyIndex + 1;
+                          if (index >= history.length) {
+                            setHistoryIndex(null);
+                            setCommand("");
+                          } else {
+                            setHistoryIndex(index);
+                            setCommand(history[index]);
+                          }
+                        }
+                      }}
+                    />
+                    <span className="font-['Inter'] text-[11px] font-[500] leading-[16px] text-[#5b636e] mobile:hidden">↑ history</span>
+                  </div>
+                  <PrimaryButton
+                    className="h-10 w-auto flex-none"
+                    icon={<RoundSend />}
+                    text="Send"
+                    disabled={!running || !command.trim()}
+                    onClick={() => void submit(command)}
+                  />
+                </div>
+                <div className="flex w-full flex-wrap items-center gap-2">
+                  <span className="font-['Inter'] text-[12px] font-[600] leading-[16px] text-[#7a828e]">Quick commands</span>
+                  {quickCommands.map((item, index) => {
+                    const isCustom = index >= QUICK_COMMANDS.length;
+                    return (
+                      <PrimaryButton
+                        key={`${isCustom ? "custom" : "built-in"}:${item}`}
+                        icon={null}
+                        text={item}
+                        color="gray"
+                        size="sm"
+                        disabled={!running && !item.endsWith("…")}
+                        title={isCustom ? "Right-click to remove" : undefined}
+                        onClick={() => runQuick(item)}
+                        onContextMenu={(event) => {
+                          if (!isCustom) return;
+                          event.preventDefault();
+                          removeQuickCommand(item);
+                        }}
+                      />
+                    );
+                  })}
+                  <PrimaryButton icon={<RoundAdd />} text="Add" color="gray-transparent" size="sm" onClick={addQuickCommand} />
                 </div>
               </div>
-            </div>
-          </section>
-        </div>
-      </main>
+            </>
+          )}
+        </ServerGate>
+      </PageShell>
+      {prompt}
     </div>
   );
 }

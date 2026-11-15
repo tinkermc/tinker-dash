@@ -1,6 +1,7 @@
+@config "./ui/tailwind.config.js";
 @import "tailwindcss";
 
-/* The window itself never scrolls; each page handles its own scrolling. */
+/* Keep the webview fixed; #app-content owns page scrolling. */
 html,
 body,
 #root {
@@ -9,6 +10,12 @@ body,
   overflow: hidden;
   overscroll-behavior: none; /* stops the macOS rubber-band bounce */
   background-color: #0b0d10; /* matches the app background if anything peeks through */
+  color-scheme: dark; /* dark scrollbars, number arrows and other built-in controls */
+}
+
+/* Keep room for the scrollbar so pages don't jump sideways when they get long. */
+#app-content {
+  scrollbar-gutter: stable;
 }
 
 @font-face {
@@ -25,7 +32,6 @@ body,
   font-style: italic;
 }
 
-/* Force the webview to preserve spaces at the end of text strings */
-.subframe-text-class, label, span {
-  white-space: pre-wrap; 
+.subframe-text-class {
+  white-space: pre-wrap;
 }

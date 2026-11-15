@@ -1,160 +1,331 @@
-
-
-
-import { AppHeader } from "@/ui/components/AppHeader";
+import { Banner } from "@/ui/components/Banner";
+import { FilterChip } from "@/ui/components/FilterChip";
+import { IconButton } from "@/ui/components/IconButton";
 import { ModCardModFrame } from "@/ui/components/ModCardModFrame";
 import { ModListItem } from "@/ui/components/ModListItem";
+import { PageShell } from "@/ui/components/PageShell";
+import { PrimaryButton } from "@/ui/components/PrimaryButton";
+import { SectionCard } from "@/ui/components/SectionCard";
+import { SegmentedControl } from "@/ui/components/SegmentedControl";
+import { SelectField } from "@/ui/components/SelectField";
 import { Switch } from "@/ui/components/Switch";
 import { TabBar } from "@/ui/components/TabBar";
-import type { PageProps } from "./types";
 import BaselineAutoFixHigh from "@/ui/icons/BaselineAutoFixHigh";
 import Curseforge from "@/ui/icons/Curseforge";
 import Modrinth from "@/ui/icons/Modrinth";
+import RoundDownload from "@/ui/icons/RoundDownload";
 import RoundLock from "@/ui/icons/RoundLock";
 import RoundMoreHoriz from "@/ui/icons/RoundMoreHoriz";
+import RoundOpenInNew from "@/ui/icons/RoundOpenInNew";
 import RoundSearch from "@/ui/icons/RoundSearch";
+import RoundStop from "@/ui/icons/RoundStop";
 import RoundUpgrade from "@/ui/icons/RoundUpgrade";
 import Sort from "@/ui/icons/Sort";
+import { ConnectedHeader, serverDetail } from "../components/ConnectedHeader";
+import { previewClass } from "../components/fields";
+import { PreviewBanner, ServerGate } from "../components/PageStates";
+import { useAgent } from "../lib/AgentContext";
+import { useSelectedServer } from "../lib/hooks";
+import type { PageProps } from "./types";
 
 function Mods({ onNavigate }: PageProps) {
+  const { pending, stopServer } = useAgent();
+  const { server } = useSelectedServer();
+  const running = server?.running ?? false;
+  const action = server ? pending[server.id] : undefined;
+
   return (
-    <div className="flex h-full flex-col bg-[#0b0d10]">
-      <AppHeader
-        statusText="No servers running"
-        selectedServerLabel="Selected server"
-        selectedServerIcon="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"
-      />
-      <main className="flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto bg-[#0b0d10] px-6 py-12 mobile:px-4 mobile:pt-6">
-        <div className="flex w-full flex-col items-center">
-          <TabBar selected="mods" amountOfModsInstalled="0" onNavigate={onNavigate} />
-          <section className="flex h-[550px] w-full flex-none flex-col items-start gap-6 rounded-3xl border border-solid border-[#1f242b] bg-[#111418] px-8 py-6 mobile:h-auto mobile:px-4">
-            <div className="flex w-full items-center justify-between gap-4">
-              <h1 className="font-['Inter'] text-[28px] font-[700] leading-[36px] text-[#ffffff]">
-                Mods
-              </h1>
-              <div className="flex items-center gap-2 rounded-[9999px] border border-solid border-[#2a3038] bg-[#1a1e23] px-3 py-1">
-                <img
-                  className="h-5 w-5 flex-none object-cover"
-                  src="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/rytrk7wt47l4ydrbqt2c.png"
+    <div className="flex w-full flex-col items-start bg-[#0b0d10] min-h-full font-['Inter']">
+      <PageShell
+        header={<ConnectedHeader />}
+        tabs={<TabBar selected="mods" onNavigate={onNavigate} />}
+        title="Mods"
+        subtitle={server ? `${server.name} · ${serverDetail(server)}` : "Add, remove and update mods."}
+        actions={
+          <>
+            <PrimaryButton
+              icon={<RoundUpgrade />}
+              text="Update all"
+              color="gray"
+              size="sm"
+              disabled={true}
+              title="Needs an Agent update"
+            />
+            <IconButton className={previewClass} icon={<RoundMoreHoriz />} color="gray" />
+          </>
+        }
+      >
+        <ServerGate>
+          {running && server ? (
+            <Banner
+              icon={<RoundLock />}
+              title="Server is running — stop it to add or remove mods"
+              description={`Mods load at startup, so changes are locked while ${server.name} is online.`}
+              action={
+                <PrimaryButton
+                  icon={<RoundStop />}
+                  text={action === "stopping" ? "Stopping…" : "Stop"}
+                  color="red"
+                  size="sm"
+                  disabled={action !== undefined}
+                  onClick={() => {
+                    if (action === undefined) void stopServer(server.id);
+                  }}
                 />
-                <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#ffffff]">
-                  NeoForge SMP
-                </span>
-                <span className="font-['Inter'] text-[12px] font-[400] leading-[16px] text-[#7a828e]">
-                  NeoForge 1.21.1
-                </span>
-              </div>
-            </div>
-            <div className="flex h-[442px] w-full flex-none items-start gap-6 mobile:h-auto mobile:flex-col">
-              <aside className="flex w-[380px] flex-none flex-col items-start gap-3 self-stretch border-r border-solid border-[#232830] pr-6 mobile:w-full mobile:flex-none mobile:border-none mobile:px-0 mobile:py-0">
-                <div className="flex w-full items-center justify-between">
-                  <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#c4c9d1]">
-                    Installed (3)
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Sort className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#c4c9d1]" />
-                    <div className="flex items-center rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] pl-0.5 pr-2 hover:border-[#3a414b]">
-                      <RoundUpgrade className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#aeb4bd]" />
-                      <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd]">
-                        Update all (1)
-                      </span>
-                    </div>
-                    <div className="flex items-center rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] hover:border-[#3a414b]">
-                      <RoundMoreHoriz className="font-['Inter'] text-[20px] font-[400] leading-[20px] text-[#aeb4bd]" />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex w-full grow shrink-0 basis-0 flex-col items-start gap-2 pr-1 overflow-auto">
-                  <div className="flex w-full items-center justify-center">
-                    <div className="flex h-9 items-center justify-center gap-1 rounded-[8px] border border-solid border-[#ef444466] bg-[#7f1d1d] pl-1.5 pr-3">
-                      <RoundLock className="font-['Inter'] text-[16px] font-[500] leading-[20px] text-[#ffffff]" />
-                      <span className="font-['Inter'] text-[13px] font-[500] leading-[20px] text-[#ffffff]">
-                        Server running: modifying locked
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex w-full flex-col items-start gap-2 opacity-50">
-                    <ModListItem
-                      image="https://cdn.modrinth.com/data/P7dR8mSH/icon.png"
-                      name="Mod Name"
-                      version="v0.0.0"
-                      action={
-                        <Switch
-                          className="h-6 w-11 flex-none"
-                          checked={true}
-                          onCheckedChange={() => undefined}
-                        />
-                      }
-                    />
-                  </div>
-                </div>
-              </aside>
-              <div className="flex grow shrink-0 basis-0 flex-col items-start gap-3 self-stretch mobile:flex-none">
-                <div className="flex w-full items-center justify-between gap-2">
-                  <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#c4c9d1]">
-                    Browse 
-                  </span>
-                  <div className="flex items-center gap-1 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-1 py-1">
-                    <div className="flex items-center gap-1 rounded-[6px] border border-solid border-[#22c55e80] bg-[#123321] pl-2.5 pr-3">
-                      <Modrinth className="font-['Inter'] text-[13px] font-[500] leading-[20px] text-[#46d66d]" />
-                      <span className="font-['Inter'] text-[13px] font-[500] leading-[20px] text-[#ffffff]">
-                        Modrinth
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 rounded-[6px] border border-solid border-transparent pl-2.5 pr-3 hover:bg-[#1a1e23] opacity-25">
-                      <Curseforge className="font-['Inter'] text-[13px] font-[500] leading-[20px] text-[#f16436]" />
-                      <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#7a828e]">
-                        CurseForge
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex h-10 w-full flex-none items-center gap-2 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 focus-within:border-[#22c55e]">
+              }
+              variant="locked"
+            />
+          ) : null}
+          <PreviewBanner
+            title="Mods are a preview for now"
+            description="Listing, installing and removing mods needs an Agent update. Everything below is sample data."
+          />
+        <div className={`flex w-full items-start gap-6 mobile:flex-col ${previewClass}`}>
+          <aside className="flex w-[380px] flex-none flex-col items-start gap-3 mobile:w-full mobile:flex-none">
+            <SectionCard
+              title="Installed (12)"
+              description="1 update available"
+            >
+              <div className="flex w-full flex-col items-start gap-2 px-3 py-3">
+                <div className="flex h-10 w-full flex-none items-center gap-2 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] pl-3 pr-1.5 focus-within:border-[#22c55e]">
                   <RoundSearch className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#7a828e]" />
                   <input
                     className="grow shrink-0 basis-0 self-stretch font-['Inter'] text-[14px] font-[400] leading-[21px] text-[#ffffff] outline-none placeholder:text-[#7a828e]"
-                    placeholder="Search Modrinth for NeoForge 1.21.1 mods"
+                    placeholder="Browse installed mods"
                     value=""
                     type="search"
                   />
+                  <IconButton tooltip="" icon={<Sort />} color="gray" />
                 </div>
-                <div className="flex w-full flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-1 rounded-[9999px] border border-solid border-[#22c55e80] bg-[#123321] px-3 py-0.5">
-                    <BaselineAutoFixHigh className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#ffffff]" />
-                    <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#ffffff]">
-                      Performance and Optimization
-                    </span>
-                  </div>
-                  <div className="flex items-center rounded-[9999px] border border-solid border-[#2a3038] bg-[#1a1e23] px-3 py-0.5 hover:border-[#3a414b]">
-                    <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd]">
-                      Utility
-                    </span>
-                  </div>
-                  <div className="flex items-center rounded-[9999px] border border-solid border-[#2a3038] bg-[#1a1e23] px-3 py-0.5 hover:border-[#3a414b]">
-                    <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd]">
-                      dependecy
-                    </span>
-                  </div>
-                  <div className="flex items-center rounded-[9999px] border border-solid border-[#2a3038] bg-[#1a1e23] px-3 py-0.5 hover:border-[#3a414b]">
-                    <span className="font-['Inter'] text-[13px] font-[400] leading-[20px] text-[#aeb4bd]">
-                      Tech
-                    </span>
-                  </div>
-                </div>
-                <div className="w-full grow shrink-0 basis-0 items-start gap-3 pr-1 grid grid-cols-2 content-start overflow-auto mobile:grid mobile:content-start mobile:overflow-auto mobile:grid-cols-1">
-                  <ModCardModFrame
-                    name="Mod Name"
-                    author="by simibubi"
-                    description="Description"
-                    downloadCount="0"
-                    image="https://cdn.modrinth.com/data/P7dR8mSH/icon.png"
+                <div className="flex w-full flex-col items-start gap-2 px-1">
+                  <ModListItem
+                    image="https://cdn.modrinth.com/data/LNytGWDc/icon.png"
+                    name="Create"
+                    version="6.0.4 · simibubi"
+                    action={
+                      <Switch
+                        checked={true}
+                        disabled={true}
+                      />
+                    }
+                    updateAvaliable={true}
+                  />
+                  <ModListItem
+                    image="https://cdn.modrinth.com/data/u6dRKJwZ/icon.png"
+                    name="Just Enough Items (JEI)"
+                    version="19.21.0 · mezz"
+                    action={
+                      <Switch
+                        checked={true}
+                        disabled={true}
+                      />
+                    }
+                  />
+                  <ModListItem
+                    image="https://cdn.modrinth.com/data/sk9rgfiA/icon.png"
+                    name="Embeddium"
+                    version="1.0.11 · embeddedt"
+                    action={
+                      <Switch
+                        checked={true}
+                        disabled={true}
+                      />
+                    }
+                  />
+                  <ModListItem
+                    image="https://cdn.modrinth.com/data/R2OftAxM/icon.png"
+                    name="Farmer's Delight"
+                    version="1.2.6 · vectorwing"
+                    action={
+                      <Switch
+                        checked={true}
+                        disabled={true}
+                      />
+                    }
+                  />
+                  <ModListItem
+                    image="https://cdn.modrinth.com/data/LOpKHB2A/icon.png"
+                    name="Waystones"
+                    version="21.1.5 · BlayTheNinth"
+                    action={
+                      <Switch
+                        checked={true}
+                        disabled={true}
+                      />
+                    }
+                  />
+                  <ModListItem
+                    image="https://cdn.modrinth.com/data/XxWD5pD3/icon.png"
+                    name="Applied Energistics 2"
+                    version="19.2.4 · AlgorithmX2"
+                    action={
+                      <Switch
+                        checked={false}
+                        disabled={true}
+                      />
+                    }
                   />
                 </div>
+                <div className="flex w-full items-center justify-center gap-0.5">
+                  <RoundOpenInNew className="font-['Inter'] text-[16px] font-[500] leading-[16px] text-[#7a828e]" />
+                  <span className="font-['Inter'] text-[12px] font-[500] leading-[16px] text-[#7a828e] text-center py-1">
+                    Show all 12 mods
+                  </span>
+                </div>
               </div>
+            </SectionCard>
+            <SectionCard
+              title="Modpack"
+              description="Share your exact mod list with players."
+            >
+              <div className="flex w-full flex-col items-start gap-3 px-4 py-4">
+                <Banner
+                  title="Players need these mods too"
+                  description="Export a modpack so friends can join with one click in their launcher."
+                  variant="info"
+                />
+                <div className="flex w-full items-center gap-2">
+                  <div className="flex grow shrink-0 basis-0 flex-col items-center gap-2">
+                    <div className="flex w-full items-center gap-2">
+                      <PrimaryButton
+                        className="h-auto grow shrink-0 basis-0"
+                        tooltip=""
+                        icon={<RoundUpgrade />}
+                        text="Export .mrpack"
+                        color="gray"
+                        size="sm"
+                      />
+                      <PrimaryButton
+                        className="h-auto grow shrink-0 basis-0"
+                        tooltip=""
+                        icon={<RoundDownload />}
+                        text="Import .mrpack"
+                        color="gray"
+                        size="sm"
+                      />
+                    </div>
+                    <PrimaryButton
+                      className="h-auto min-h-[30px] w-full flex-none"
+                      includePlusBadge={true}
+                      tooltip=""
+                      icon={<Modrinth />}
+                      text="Modrinth Shared Instance"
+                      color="purple"
+                      size="sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+          </aside>
+          <div className="flex grow shrink-0 basis-0 flex-col items-start gap-3">
+            <div className="flex w-full items-center justify-between gap-3 mobile:flex-col mobile:items-start">
+              <span className="font-['Inter'] text-[16px] font-[700] leading-[24px] text-[#ffffff]">
+                Browse mods
+              </span>
+              <SegmentedControl>
+                <SegmentedControl.Item
+                  label="Modrinth"
+                  icon={<Modrinth />}
+                  selected={true}
+                />
+                <SegmentedControl.Item
+                  label="CurseForge"
+                  icon={<Curseforge />}
+                  disabled={true}
+                />
+              </SegmentedControl>
             </div>
-          </section>
+            <div className="flex w-full items-end gap-3 mobile:flex-col mobile:items-stretch">
+              <div className="flex h-10 grow shrink-0 basis-0 items-center gap-2 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 focus-within:border-[#22c55e]">
+                <RoundSearch className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#7a828e]" />
+                <input
+                  className="grow shrink-0 basis-0 self-stretch font-['Inter'] text-[14px] font-[400] leading-[21px] text-[#ffffff] outline-none placeholder:text-[#7a828e]"
+                  placeholder="Search Modrinth for NeoForge 1.21.1 mods"
+                  value=""
+                  type="search"
+                />
+              </div>
+              <SelectField
+                className="h-auto w-48 flex-none mobile:w-full"
+                label=""
+                placeholder="Most downloads"
+                helperText=""
+                value={undefined}
+                disabled={true}
+              >
+                <SelectField.Item value="Most downloads">
+                  Most downloads
+                </SelectField.Item>
+                <SelectField.Item value="Recently updated">
+                  Recently updated
+                </SelectField.Item>
+                <SelectField.Item value="Newest">Newest</SelectField.Item>
+              </SelectField>
+            </div>
+            <div className="flex w-full flex-wrap items-center gap-2">
+              <FilterChip label="All" count="" selected={true} />
+              <FilterChip label="Tech" count="" />
+              <FilterChip label="Magic" count="" />
+              <FilterChip label="Adventure" count="" />
+              <FilterChip label="Storage" count="" />
+              <FilterChip
+                label="Performance"
+                count=""
+                icon={<BaselineAutoFixHigh />}
+              />
+              <FilterChip label="Library" count="" />
+            </div>
+            <div className="w-full items-start gap-3 grid grid-cols-2 mobile:grid mobile:grid-cols-1">
+              <ModCardModFrame
+                name="Create"
+                author="simibubi"
+                description="Aesthetic technology: contraptions, gears and automation."
+                downloadCount="12.4M"
+                installed={true}
+                image="https://cdn.modrinth.com/data/LNytGWDc/icon.png"
+              />
+              <ModCardModFrame
+                name="Applied Energistics 2"
+                author="AlgorithmX2"
+                description="A digital storage network for all your items."
+                downloadCount="9.1M"
+                installed={true}
+                image="https://cdn.modrinth.com/data/XxWD5pD3/icon.png"
+              />
+              <ModCardModFrame
+                name="FerriteCore"
+                author="malte0811"
+                description="Reduces memory usage so big modpacks run smoothly."
+                downloadCount="48.2M"
+                image="https://cdn.modrinth.com/data/uXXizFIs/icon.png"
+              />
+              <ModCardModFrame
+                name="Lithium"
+                author="CaffeineMC"
+                description="Server-side performance boosts with no gameplay changes."
+                downloadCount="31.7M"
+                image="https://cdn.modrinth.com/data/fPetb5Kh/icon.png"
+              />
+              <ModCardModFrame
+                name="Mekanism"
+                author="bradyaidanc"
+                description="Machines, ore processing, power and jetpacks."
+                downloadCount="6.3M"
+                image="https://cdn.modrinth.com/data/ordsPcFz/icon.png"
+              />
+              <ModCardModFrame
+                name="Sophisticated Backpacks"
+                author="P3pp3rF1y"
+                description="Upgradeable backpacks with sorting and pickup."
+                downloadCount="4.8M"
+                image="https://cdn.modrinth.com/data/Ha28R6CL/icon.png"
+              />
+            </div>
+          </div>
         </div>
-      </main>
+        </ServerGate>
+      </PageShell>
     </div>
   );
 }

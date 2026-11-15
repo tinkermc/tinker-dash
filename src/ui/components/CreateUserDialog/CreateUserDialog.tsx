@@ -1,40 +1,41 @@
 "use client";
 /*
  * Documentation:
+ * Badge — https://app.subframe.com/8707573e90c5/library?component=Badge_c5ada507-3852-4c54-9032-fd52fad4b3f6
  * CloseButtonContainer — https://app.subframe.com/8707573e90c5/library?component=CloseButtonContainer_d67db6cb-2d77-4f03-8a08-c20a662b8c3f
  * CreateUserDialog — https://app.subframe.com/8707573e90c5/library?component=CreateUserDialog_8556104a-0136-4f56-9423-5e85bf27d779
  * MCUsernameField — https://app.subframe.com/8707573e90c5/library?component=MCUsernameField_c56319da-bfe9-48f1-b4eb-52bc75b80c03
  * PrimaryButton — https://app.subframe.com/8707573e90c5/library?component=PrimaryButton_fd8dbcfe-8313-4878-b3a2-c6c084a47f95
+ * SectionCard — https://app.subframe.com/8707573e90c5/library?component=SectionCard_4ae42ed7-c4f9-45dc-aa8d-a954ddf53c31
+ * SettingRow — https://app.subframe.com/8707573e90c5/library?component=SettingRow_c3794633-f77e-4fa6-a906-cec8edd3c496
  */
 
 import React from "react";
 import OutlineCancel from "../../icons/OutlineCancel";
-import RoundAdminPanelSettings from "../../icons/RoundAdminPanelSettings";
+import RoundLock from "../../icons/RoundLock";
 import RoundNewLabel from "../../icons/RoundNewLabel";
-import RoundNotifications from "../../icons/RoundNotifications";
 import RoundPersonAddAlt1 from "../../icons/RoundPersonAddAlt1";
-import RoundSearch from "../../icons/RoundSearch";
+import RoundStarFilled from "../../icons/RoundStarFilled";
 import * as SubframeUtils from "../../utils";
+import { Badge } from "../Badge";
 import { CloseButtonContainer } from "../CloseButtonContainer";
 import { McUsernameField } from "../McUsernameField";
 import { PrimaryButton } from "../PrimaryButton";
+import { SectionCard } from "../SectionCard";
+import { SettingRow } from "../SettingRow";
 
 export interface CreateUserDialogRootProps
   extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
-  onClose?: () => void;
 }
 
 const CreateUserDialogRoot = React.forwardRef<
   HTMLDivElement,
   CreateUserDialogRootProps
 >(function CreateUserDialogRoot(
-  { className, onClose, ...otherProps }: CreateUserDialogRootProps,
+  { className, ...otherProps }: CreateUserDialogRootProps,
   ref
-)
-
-{
-  const [usernameInput, setUsernameInput] = React.useState("");
+) {
   return (
     <div
       className={SubframeUtils.twClassNames(
@@ -54,14 +55,9 @@ const CreateUserDialogRoot = React.forwardRef<
         <CloseButtonContainer
           closeButton={
             <div className="flex items-center justify-between">
-              <button
-                type="button"
-                aria-label="Close dialog"
-                onClick={onClose}
-                className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] hover:border-[#3a414b]"
-              >
+              <div className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] hover:border-[#3a414b]">
                 <OutlineCancel className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#aeb4bd]" />
-              </button>
+              </div>
             </div>
           }
         />
@@ -75,8 +71,7 @@ const CreateUserDialogRoot = React.forwardRef<
             <input
               className="h-10 w-full flex-none rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[21px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
               placeholder="e.g. RedstoneRita"
-              value={usernameInput}
-              onChange={(e) => setUsernameInput(e.target.value)}
+              value=""
               type="text"
             />
           </div>
@@ -129,65 +124,33 @@ const CreateUserDialogRoot = React.forwardRef<
           </div>
         </div>
         <div className="flex h-px w-full flex-none items-start bg-[#232830]" />
-        <div className="flex w-full flex-col items-start gap-2">
-          <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#c4c9d1]">
-            Role
-          </span>
-          <div className="flex w-full flex-col items-start gap-2">
-            <div className="flex w-full items-center gap-3 rounded-[10px] border-2 border-solid border-[#2a3038] bg-[#0b0d10] px-3 py-2 hover:border-[#3a414b]">
-              <div className="flex h-4 w-4 flex-none items-start rounded-[9999px] border-2 border-solid border-[#4b5563] bg-[#0b0d10]" />
-              <div className="flex grow shrink-0 basis-0 flex-col items-start gap-0.5">
-                <div className="flex items-center gap-0.5 rounded-[9999px] border border-solid border-[#4b5563] bg-[#232830] pl-1 pr-2">
-                  <RoundAdminPanelSettings className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#fd9eff]" />
-                  <span className="font-['Inter'] text-[11px] font-[600] leading-[18px] text-[#fd9eff]">
-                    Admin
-                  </span>
-                </div>
-                <span className="w-full whitespace-nowrap font-['Inter'] text-[13px] font-[400] leading-[18px] text-[#aeb4bd] truncate">
-                  Everything except managing owners
-                </span>
-              </div>
-            </div>
-            <div className="flex w-full items-center gap-3 rounded-[10px] border-2 border-solid border-[#22c55e] bg-[#123321] px-3 py-2 shadow-[0px_0px_0px_3px_#22c55e33]">
-              <div className="flex h-4 w-4 flex-none items-center justify-center rounded-[9999px] border-2 border-solid border-[#22c55e] bg-[#0b0d10]">
-                <div className="flex h-2 w-2 flex-none items-start rounded-[9999px] bg-[#22c55e]" />
-              </div>
-              <div className="flex grow shrink-0 basis-0 flex-col items-start gap-0.5">
-                <div className="flex items-center gap-0.5 rounded-[9999px] border border-solid border-[#4b5563] bg-[#232830] pl-1 pr-2">
-                  <RoundNotifications className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#7438ff]" />
-                  <span className="font-['Inter'] text-[11px] font-[600] leading-[18px] text-[#7438ff]">
-                    Moderator
-                  </span>
-                </div>
-                <span className="w-full whitespace-nowrap font-['Inter'] text-[13px] font-[400] leading-[18px] text-[#aeb4bd] truncate">
-                  Players, console and logs
-                </span>
-              </div>
-            </div>
-            <div className="flex w-full items-center gap-3 rounded-[10px] border-2 border-solid border-[#2a3038] bg-[#0b0d10] px-3 py-2 hover:border-[#3a414b]">
-              <div className="flex h-4 w-4 flex-none items-start rounded-[9999px] border-2 border-solid border-[#4b5563] bg-[#0b0d10]" />
-              <div className="flex grow shrink-0 basis-0 flex-col items-start gap-0.5">
-                <div className="flex items-center gap-0.5 rounded-[9999px] border border-solid border-[#4b5563] bg-[#232830] pl-1 pr-2">
-                  <RoundSearch className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#96a2b0]" />
-                  <span className="font-['Inter'] text-[11px] font-[600] leading-[18px] text-[#96a2b0]">
-                    Viewer
-                  </span>
-                </div>
-                <span className="w-full whitespace-nowrap font-['Inter'] text-[13px] font-[400] leading-[18px] text-[#aeb4bd] truncate">
-                  Read-only access to logs and status
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
+        <SectionCard
+          title="Role"
+          description="Tinker comes shipped with one default role, the Administrator."
+        >
+          <SettingRow
+            title="Administrator"
+            description="26 of 26 permissions · can't be edited"
+            badge={
+              <Badge
+                label="Administrator"
+                icon={<RoundStarFilled />}
+                variant="amber"
+              />
+            }
+            control={
+              <Badge label="Locked" icon={<RoundLock />} variant="gray" />
+            }
+            divider={true}
+          />
+          <div className="flex w-full grow shrink-0 basis-0 items-center justify-center py-2">
             <PrimaryButton
-              tooltip="Directs you to Create Role menu."
+              tooltip=""
               icon={<RoundNewLabel />}
-              text="Create custom role"
-              color="gray"
+              text="Create role"
             />
           </div>
-        </div>
+        </SectionCard>
         <div className="flex flex-col items-start gap-4">
           <div className="flex items-center gap-2">
             <div className="flex h-4 w-4 flex-none items-center justify-center rounded-[4px] border border-solid border-[#22c55e] bg-[#22c55e]">
@@ -230,7 +193,6 @@ const CreateUserDialogRoot = React.forwardRef<
             icon={<OutlineCancel />}
             text="Cancel"
             color="gray"
-            onClick={onClose}
           />
         </div>
       </div>

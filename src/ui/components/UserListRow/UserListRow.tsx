@@ -5,11 +5,10 @@
  */
 
 import React from "react";
-import RoundStarFilled from "../../icons/RoundStarFilled";
 import * as SubframeUtils from "../../utils";
 
 export interface UserListRowRootProps
-  extends React.HTMLAttributes<HTMLDivElement> {
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "role"> {
   pfp?: string;
   username?: React.ReactNode;
   status?: React.ReactNode;
@@ -18,6 +17,7 @@ export interface UserListRowRootProps
   offlineTimestamp?: React.ReactNode;
   hideRole?: boolean;
   connectedText?: React.ReactNode;
+  role?: React.ReactNode;
   className?: string;
 }
 
@@ -32,6 +32,7 @@ const UserListRowRoot = React.forwardRef<HTMLDivElement, UserListRowRootProps>(
       offlineTimestamp,
       hideRole = false,
       connectedText,
+      role,
       className,
       ...otherProps
     }: UserListRowRootProps,
@@ -40,13 +41,13 @@ const UserListRowRoot = React.forwardRef<HTMLDivElement, UserListRowRootProps>(
     return (
       <div
         className={SubframeUtils.twClassNames(
-          "group/a50ba24a flex items-center gap-3 border-b border-solid border-[#1f242b] px-4 py-3 hover:bg-[#111418]",
+          "group/a50ba24a flex w-full items-center gap-3 border-b border-solid border-[#1f242b] px-4 py-3 hover:bg-[#111418]",
           className
         )}
         ref={ref}
         {...otherProps}
       >
-        <div className="flex min-w-[0px] grow shrink-0 basis-0 items-center gap-3">
+        <div className="flex grow shrink-0 basis-0 items-center gap-3">
           {pfp ? (
             <img
               className="h-8 w-8 flex-none rounded-[6px] object-cover"
@@ -58,19 +59,8 @@ const UserListRowRoot = React.forwardRef<HTMLDivElement, UserListRowRootProps>(
               {username}
             </span>
           ) : null}
-        </div>
-        <div className="flex w-28 flex-none items-start">
-          <div
-            className={SubframeUtils.twClassNames(
-              "flex items-center gap-0.5 rounded-[9999px] border border-solid border-[#4b5563] bg-[#232830] pl-1 pr-2",
-              { hidden: hideRole }
-            )}
-          >
-            <RoundStarFilled className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#ffffff]" />
-            <span className="font-['Inter'] text-[11px] font-[600] leading-[18px] text-[#ffffff]">
-              Role
-            </span>
-          </div>
+          {role ? <div className="flex items-center gap-3">{role}</div> : null}
+          <div className="flex min-w-[0px] grow shrink-0 basis-0 items-center gap-3" />
         </div>
         <div
           className={SubframeUtils.twClassNames(

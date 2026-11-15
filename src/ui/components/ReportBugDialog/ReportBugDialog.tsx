@@ -56,52 +56,21 @@ const ReportBugDialogRoot = React.forwardRef<
           required={true}
           title="Subject"
           placeholder="Connection Bug"
+          helperText=""
           input={
-            <>
-              <input
-                className="grow shrink-0 basis-0 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[21px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
-                placeholder="Connection Bug"
-                value=""
-                type="text"
-              />
-              <input
-                className="hidden grow shrink-0 basis-0 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[21px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
-                placeholder="Connection Bug"
-                value=""
-                type="text"
-              />
-              <input
-                className="hidden h-10 grow shrink-0 basis-0 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[21px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
-                placeholder="Username or UUID"
-                value=""
-                type="text"
-              />
-            </>
+            <input
+              className="grow shrink-0 basis-0 self-stretch rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[21px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
+              placeholder="Connection Bug"
+              value=""
+              type="text"
+            />
           }
         />
         <InputField
           required={true}
           title="Content"
           placeholder="Enter bug report here. Ensure to follow guidelines for bug reporting."
-          input={
-            <>
-              <textarea
-                className="grow shrink-0 basis-0 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[21px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
-                placeholder="Enter bug report here. Ensure to follow guidelines for bug reporting."
-                value=""
-              />
-              <input
-                className="hidden h-10 grow shrink-0 basis-0 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[21px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
-                placeholder="Username or UUID"
-                value=""
-                type="text"
-              />
-            </>
-          }
-        />
-        <InputField
-          title="Images"
-          placeholder="Enter bug report here. Ensure to follow guidelines for bug reporting."
+          helperText=""
           input={
             <>
               <textarea

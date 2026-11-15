@@ -97,8 +97,19 @@ const PlayerProfileHeaderRoot = React.forwardRef<
               )}
             />
             {status === "banned" ? (
-              <Hammer className="font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#ef4444]" />
-            ) : null}
+              <Hammer
+                className={SubframeUtils.twClassNames(
+                  "hidden font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#ef4444]",
+                  { "inline-flex": status === "banned" }
+                )}
+              />
+            ) : (
+              <RoundHourglassEmpty
+                className={SubframeUtils.twClassNames(
+                  "hidden font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#ef4444]"
+                )}
+              />
+            )}
             <span
               className={SubframeUtils.twClassNames(
                 "font-['Inter'] text-[12px] font-[500] leading-[20px] text-[#86efac]",

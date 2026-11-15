@@ -107,14 +107,6 @@ const ImageFieldRoot = React.forwardRef<HTMLDivElement, ImageFieldRootProps>(
               className="h-auto max-h-[100px] w-auto flex-none"
               src="https://res.cloudinary.com/subframe/image/upload/v1794176827/uploads/47820/pnj2hzawamjngcqjhxg9.png"
             />
-            <ImageTile
-              className="h-auto max-h-[100px] w-auto flex-none"
-              src="https://res.cloudinary.com/subframe/image/upload/v1793814477/uploads/47820/iy6ektqdbqkda1bdsdw3.webp"
-            />
-            <ImageTile
-              className="h-auto max-h-[100px] w-auto flex-none"
-              src="https://res.cloudinary.com/subframe/image/upload/v1794176827/uploads/47820/pnj2hzawamjngcqjhxg9.png"
-            />
             <div className="flex flex-col items-center justify-center gap-2 rounded-[6px] border border-solid border-[#2a3038] bg-[#0b0d10] px-px py-px">
               <RoundAdd className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#ffffff]" />
             </div>

@@ -1,5 +1,5 @@
 "use client";
-import { CreateRoleDialog as CreateRoleDialogComponent } from "./CreateRoleDialog";
+import { TinkerLogin as TinkerLoginComponent } from "./TinkerLogin";
 
 /**
  * Add wrapper components and business logic here.
@@ -7,4 +7,4 @@ import { CreateRoleDialog as CreateRoleDialogComponent } from "./CreateRoleDialo
  * Learn more: https://docs.subframe.com/develop/concepts/syncing-components#wrapping-components
  */
 
-export const CreateRoleDialog = CreateRoleDialogComponent;
+export const TinkerLogin = TinkerLoginComponent;

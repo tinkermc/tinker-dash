@@ -9,6 +9,7 @@
 import React from "react";
 import RoundDelete from "../../icons/RoundDelete";
 import RoundModeEditOutline from "../../icons/RoundModeEditOutline";
+import RoundStarFilled from "../../icons/RoundStarFilled";
 import * as SubframeUtils from "../../utils";
 import { IconButton } from "../IconButton";
 import { UserListRow } from "../UserListRow";
@@ -47,6 +48,7 @@ const UsersTableRoot = React.forwardRef<HTMLDivElement, UsersTableRootProps>(
           </span>
         </div>
         <UserListRow
+          className="h-auto w-full flex-none"
           pfp="https://api.mcheads.org/head/CanBeGold/96"
           username="username"
           status="Connected"
@@ -66,6 +68,16 @@ const UsersTableRoot = React.forwardRef<HTMLDivElement, UsersTableRootProps>(
           }
           offlineTimestamp="3 days ago"
           connectedText="Connected"
+          role={
+            <div className="flex items-start">
+              <div className="flex items-center gap-0.5 rounded-[9999px] border border-solid border-[#4b5563] bg-[#232830] pl-1 pr-2">
+                <RoundStarFilled className="font-['Inter'] text-[12px] font-[400] leading-[18px] text-[#ffffff]" />
+                <span className="font-['Inter'] text-[11px] font-[600] leading-[18px] text-[#ffffff]">
+                  Role
+                </span>
+              </div>
+            </div>
+          }
         />
       </div>
     );

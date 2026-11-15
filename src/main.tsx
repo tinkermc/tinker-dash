@@ -5,12 +5,18 @@ import "@fontsource/inter/500.css";
 import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AgentProvider } from "./lib/AgentContext";
+import { ConsoleProvider } from "./lib/ConsoleContext";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <AgentProvider>
-      <App />
-    </AgentProvider>
+    <ErrorBoundary>
+      <AgentProvider>
+        <ConsoleProvider>
+          <App />
+        </ConsoleProvider>
+      </AgentProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );

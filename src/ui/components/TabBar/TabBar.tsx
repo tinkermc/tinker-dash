@@ -8,7 +8,6 @@
 import React from "react";
 import RoundCompass from "../../icons/RoundCompass";
 import RoundLayers from "../../icons/RoundLayers";
-import RoundList from "../../icons/RoundList";
 import RoundPeople from "../../icons/RoundPeople";
 import RoundSaveAll from "../../icons/RoundSaveAll";
 import RoundServerX1 from "../../icons/RoundServerX1";
@@ -18,6 +17,7 @@ import TinkerDash from "../../icons/TinkerDash";
 import * as SubframeUtils from "../../utils";
 import type { TabId } from "../../../pages/types";
 import { Tab } from "../Tab";
+import RoundFolderCopy from "@/ui/icons/RoundFolderCopy";
 
 export interface TabBarRootProps extends React.HTMLAttributes<HTMLElement> {
   selected?:
@@ -33,6 +33,7 @@ export interface TabBarRootProps extends React.HTMLAttributes<HTMLElement> {
     | "backups"
     | "tinker";
   amountOfModsInstalled?: React.ReactNode;
+  modCount?: React.ReactNode;
   className?: string;
   onNavigate?: (tab: TabId) => void;
 }
@@ -42,15 +43,15 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
     {
       selected = "none",
       amountOfModsInstalled,
+      modCount,
       className,
       onNavigate,
       ...otherProps
     }: TabBarRootProps,
     ref
   ) {
-    const handleNavigate = (tab: TabId) => {
-      if (selected !== "connection-disconnected") onNavigate?.(tab);
-    };
+    const handleNavigate = (tab: TabId) => onNavigate?.(tab);
+    const installedMods = modCount ?? amountOfModsInstalled;
 
     return (
       <nav
@@ -78,7 +79,6 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
                 ? true
                 : undefined
             }
-            locked={selected === "connection-disconnected" ? false : undefined}
           />
           <Tab
             className="min-w-0 flex-1 items-stretch mobile:flex-none mobile:items-start"
@@ -93,15 +93,18 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
                 ? false
                 : undefined
             }
-            locked={selected === "connection-disconnected" ? true : undefined}
           />
           <Tab
             className="min-w-0 flex-1 items-stretch mobile:flex-none mobile:items-start"
             icon={<RoundCompass />}
             title="Mods"
             onClick={() => handleNavigate("Mods")}
-            numberAttached={true}
-            numberAttatched={amountOfModsInstalled}
+            numberAttached={
+              installedMods !== undefined &&
+              installedMods !== null &&
+              installedMods !== ""
+            }
+            numberAttatched={installedMods}
             selected={
               selected === "mods"
                 ? true
@@ -109,11 +112,10 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
                 ? false
                 : undefined
             }
-            locked={selected === "connection-disconnected" ? true : undefined}
           />
           <Tab
             className="min-w-0 flex-1 items-stretch mobile:flex-none mobile:items-start"
-            icon={<RoundList />}
+            icon={<RoundFolderCopy/>}
             title="Files"
             onClick={() => handleNavigate("Files")}
             numberAttatched="0"
@@ -124,7 +126,6 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
                 ? false
                 : undefined
             }
-            locked={selected === "connection-disconnected" ? true : undefined}
           />
           <Tab
             className="min-w-0 flex-1 items-stretch mobile:flex-none mobile:items-start"
@@ -139,7 +140,6 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
                 ? false
                 : undefined
             }
-            locked={selected === "connection-disconnected" ? true : undefined}
           />
           <Tab
             className="min-w-0 flex-1 items-stretch mobile:flex-none mobile:items-start"
@@ -154,7 +154,6 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
                 ? false
                 : undefined
             }
-            locked={selected === "connection-disconnected" ? true : undefined}
           />
           <Tab
             className="min-w-0 flex-1 items-stretch mobile:flex-none mobile:items-start"
@@ -169,7 +168,6 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
                 ? false
                 : undefined
             }
-            locked={selected === "connection-disconnected" ? true : undefined}
           />
           <Tab
             className="min-w-0 flex-1 items-stretch mobile:flex-none mobile:items-start"
@@ -184,7 +182,6 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
                 ? false
                 : undefined
             }
-            locked={selected === "connection-disconnected" ? true : undefined}
           />
           <Tab
             className="min-w-0 flex-1 items-stretch mobile:flex-none mobile:items-start"
@@ -199,7 +196,6 @@ const TabBarRoot = React.forwardRef<HTMLElement, TabBarRootProps>(
                 ? false
                 : undefined
             }
-            locked={selected === "connection-disconnected" ? true : undefined}
           />
         </div>
       </nav>

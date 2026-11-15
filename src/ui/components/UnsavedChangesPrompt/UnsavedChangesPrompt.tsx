@@ -47,13 +47,9 @@ const UnsavedChangesPromptRoot = React.forwardRef<
            unsaved changes
         </span>
       </div>
+      <PrimaryButton tooltip="" icon={<RoundSave />} text="Save" />
       <PrimaryButton
-        tooltip="When you hover over this button, this text appears!"
-        icon={<RoundSave />}
-        text="Save"
-      />
-      <PrimaryButton
-        tooltip="When you hover over this button, this text appears!"
+        tooltip=""
         icon={<RoundDelete />}
         text="Discard"
         color="gray"

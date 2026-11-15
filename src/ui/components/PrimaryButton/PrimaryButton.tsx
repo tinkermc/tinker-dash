@@ -1,6 +1,7 @@
 "use client";
 /*
  * Documentation:
+ * Badge — https://app.subframe.com/8707573e90c5/library?component=Badge_c5ada507-3852-4c54-9032-fd52fad4b3f6
  * PrimaryButton — https://app.subframe.com/8707573e90c5/library?component=PrimaryButton_fd8dbcfe-8313-4878-b3a2-c6c084a47f95
  */
 
@@ -8,9 +9,11 @@ import React from "react";
 import * as SubframeCore from "@subframe/core";
 import RoundCheckCircleOutline from "../../icons/RoundCheckCircleOutline";
 import * as SubframeUtils from "../../utils";
+import { Badge } from "../Badge";
 
 export interface PrimaryButtonRootProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "color"> {
+  includePlusBadge?: boolean;
   tooltip?: React.ReactNode;
   icon?: React.ReactNode;
   text?: React.ReactNode;
@@ -22,7 +25,9 @@ export interface PrimaryButtonRootProps
     | "blue"
     | "gray-transparent"
     | "gray-dangerous"
-    | "gray-success";
+    | "gray-success"
+    | "gray-warning";
+  size?: "sm" | "md" | "lg";
   disabled?: boolean;
   className?: string;
 }
@@ -32,10 +37,12 @@ const PrimaryButtonRoot = React.forwardRef<
   PrimaryButtonRootProps
 >(function PrimaryButtonRoot(
   {
+    includePlusBadge = false,
     tooltip,
     icon = <RoundCheckCircleOutline />,
     text,
     color = "green",
+    size = "md",
     disabled = false,
     className,
     ...otherProps
@@ -45,12 +52,16 @@ const PrimaryButtonRoot = React.forwardRef<
   return (
     <div
       className={SubframeUtils.twClassNames(
-        "group/fd8dbcfe flex items-center justify-center gap-1 rounded-[8px] border border-solid border-[#22c55e] bg-[#22c55e] px-3 py-1 hover:bg-[#16a34a]",
+        "group/fd8dbcfe flex cursor-pointer items-center justify-center gap-1 rounded-[8px] border border-solid border-[#22c55e] bg-[#22c55e] px-3 py-1 hover:bg-[#16a34a]",
         {
           "opacity-50": disabled,
-          "border border-solid border-[#2a3038] bg-[#1a1e23] hover:border-[#16a34a] hover:bg-[#101c13]":
+          "h-11 gap-1.5 px-4 py-2": size === "lg",
+          "rounded-[6px] px-2 py-0.5": size === "sm",
+          "border border-solid border-[#2a3038] bg-[#1a1e23] hover:bg-[#2a1f0a] hover:border-[#f59e0b]":
+            color === "gray-warning",
+          "border border-solid border-[#2a3038] bg-[#1a1e23] hover:bg-[#101c13] hover:border-[#16a34a]":
             color === "gray-success",
-          "border border-solid border-[#2a3038] bg-[#1a1e23] hover:border-[#ef4444] hover:bg-[#2a1215]":
+          "border border-solid border-[#2a3038] bg-[#1a1e23] hover:bg-[#2a1215] hover:border-[#ef4444]":
             color === "gray-dangerous",
           "border border-solid border-[#2a3038] bg-transparent shadow-[0px_12px_32px_-4px_#2a303880] bg-gradient-to-b from-[#1A1E23] to-[#1E2530]":
             color === "gray-transparent",
@@ -58,7 +69,7 @@ const PrimaryButtonRoot = React.forwardRef<
             color === "blue",
           "border border-solid border-[#a855f7] bg-transparent shadow-[0px_12px_32px_-4px_#a855f773] bg-gradient-to-b from-[#a855f7] to-[#7c3aed] hover:from-[#9333ea] hover:to-[#6d28d9]":
             color === "purple",
-          "border border-solid border-[#2a3038] bg-[#1a1e23] hover:bg-[#1A1E23] hover:border-[#3a414b]":
+          "border border-solid border-[#2a3038] bg-[#1a1e23] hover:bg-[#1a1e23] hover:border-[#3a414b]":
             color === "gray",
           "border border-solid border-[#ef4444] bg-[#ef4444] hover:bg-[#dc2626]":
             color === "red",
@@ -73,7 +84,10 @@ const PrimaryButtonRoot = React.forwardRef<
           className={SubframeUtils.twClassNames(
             "font-['Inter'] text-[16px] font-[400] leading-[20px] text-[#04130a] select-none",
             {
+              "text-[18px] leading-[20px] tracking-normal": size === "lg",
+              "text-[14px] leading-[16px] tracking-normal": size === "sm",
               "text-[#ffffff]":
+                color === "gray-warning" ||
                 color === "gray-success" ||
                 color === "gray-dangerous" ||
                 color === "gray-transparent" ||
@@ -92,7 +106,10 @@ const PrimaryButtonRoot = React.forwardRef<
           className={SubframeUtils.twClassNames(
             "font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#04130a] select-none",
             {
+              "text-[15px] leading-[22px] tracking-normal": size === "lg",
+              "text-[13px] leading-[18px] tracking-normal": size === "sm",
               "text-[#ffffff]":
+                color === "gray-warning" ||
                 color === "gray-success" ||
                 color === "gray-dangerous" ||
                 color === "gray-transparent" ||
@@ -106,6 +123,13 @@ const PrimaryButtonRoot = React.forwardRef<
           {text}
         </span>
       ) : null}
+      <Badge
+        className={SubframeUtils.twClassNames("hidden", {
+          flex: includePlusBadge,
+        })}
+        label="Plus"
+        variant="plus"
+      />
     </div>
   );
 });

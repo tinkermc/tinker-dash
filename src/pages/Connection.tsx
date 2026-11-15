@@ -1,568 +1,541 @@
+"use client";
+
 import { useState } from "react";
-import { AppHeader } from "@/ui/components/AppHeader";
+import { Badge } from "@/ui/components/Badge";
+import { InputField } from "@/ui/components/InputField";
+import { Loader } from "@/ui/components/Loader";
+import { PageShell } from "@/ui/components/PageShell";
 import { PrimaryButton } from "@/ui/components/PrimaryButton";
+import { SectionCard } from "@/ui/components/SectionCard";
+import { SettingRow } from "@/ui/components/SettingRow";
 import { StatCard } from "@/ui/components/StatCard";
 import { StatusPill } from "@/ui/components/StatusPill";
 import { Switch } from "@/ui/components/Switch";
 import { TabBar } from "@/ui/components/TabBar";
+import BaselineHelp from "@/ui/icons/BaselineHelp";
+import OutlineCancel from "@/ui/icons/OutlineCancel";
+import RoundAdd from "@/ui/icons/RoundAdd";
 import RoundCheckCircleOutline from "@/ui/icons/RoundCheckCircleOutline";
+import RoundDelete from "@/ui/icons/RoundDelete";
+import RoundFolderZip from "@/ui/icons/RoundFolderZip";
 import RoundLogIn from "@/ui/icons/RoundLogIn";
+import RoundLogOut from "@/ui/icons/RoundLogOut";
 import RoundMemory from "@/ui/icons/RoundMemory";
+import RoundSearch from "@/ui/icons/RoundSearch";
 import RoundSettingsEthernet from "@/ui/icons/RoundSettingsEthernet";
+import RoundStarFilled from "@/ui/icons/RoundStarFilled";
+import RoundTimer from "@/ui/icons/RoundTimer";
 import RoundWifi from "@/ui/icons/RoundWifi";
 import TopSpeed20Filled from "@/ui/icons/TopSpeed20Filled";
+import { ConnectedHeader } from "../components/ConnectedHeader";
+import { ShellDialog } from "../components/Modal";
+import { TokenDialog } from "../components/TokenDialog";
+import { useAgent } from "../lib/AgentContext";
+import { agentId, errorMessage, isUnauthenticated, type AgentConnection } from "../lib/agent";
+import { useHostStats, useNow } from "../lib/hooks";
+import { connectionKind, formatGB, timeAgo } from "../lib/minecraft";
 import type { ConnectionPageProps } from "./types";
 
-import { ServerType } from "../gen/tinker/v1/server_pb";
-import type { ImportableServer } from "../gen/tinker/v1/server_pb";
-import { useAgent } from "../lib/AgentContext";
-import { errorMessage } from "../lib/agent";
-import { useConsole, useHostStats, useServers } from "../lib/hooks";
+type Message = { tone: "busy" | "ok" | "error"; text: string };
 
-const inputClass =
-  "h-10 min-w-0 rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]";
+const NOT_YET = "Needs an Agent update";
+
+const kindBadge = {
+  "This PC": "gray",
+  "Local network": "gray",
+  Tailscale: "blue",
+  Internet: "amber",
+} as const;
+
+function osName(os: string): string {
+  if (os === "linux") return "Linux";
+  if (os === "darwin") return "macOS";
+  if (os === "windows") return "Windows";
+  return os;
+}
 
 function Connection({ onNavigate, settings, onSettingsChange }: ConnectionPageProps) {
-  const { clients, info, connection, connectionError, connect, disconnect } = useAgent();
+  const {
+    clients,
+    info,
+    connection,
+    status,
+    connectionError,
+    connectedAt,
+    latencyMs,
+    connect,
+    disconnect,
+    signOut,
+    savedAgents,
+    saveCurrentAgent,
+    forgetSavedAgent,
+  } = useAgent();
   const stats = useHostStats();
-  const { servers, error: listError, refresh } = useServers();
-  const [selected, setSelected] = useState<string | null>(null);
-  const lines = useConsole(selected);
-  const [command, setCommand] = useState("");
-  const [status, setStatus] = useState("");
-  const [connecting, setConnecting] = useState(false);
-  const [name, setName] = useState("");
-  const [type, setType] = useState(ServerType.VANILLA);
-  const [version, setVersion] = useState("");
-  const [memoryMb, setMemoryMb] = useState(2048);
-  const [eula, setEula] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [createMsg, setCreateMsg] = useState("");
-  const [folder, setFolder] = useState("");
-  const [found, setFound] = useState<ImportableServer[]>([]);
-  const [importMsg, setImportMsg] = useState("");
-  const [importingPath, setImportingPath] = useState<string | null>(null);
-  const [actionMsg, setActionMsg] = useState("");
-  const isConnected = clients !== null;
+  const now = useNow(15_000);
+  const [message, setMessage] = useState<Message | null>(null);
+  const [tokenPrompt, setTokenPrompt] = useState<{ target: AgentConnection; error: string | null } | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
-  async function onConnect() {
-    const address = settings.address.trim();
-    const port = settings.port.trim() || "7122";
-    const token = settings.token.trim();
+  const connected = status === "connected";
+  const lost = status === "lost";
+  const busy = message?.tone === "busy";
+  const currentId = clients && connection ? agentId(connection) : null;
+  const hostName = info?.hostname || connection?.address || "your Agent";
+  const live = connected && stats !== null;
 
+  // `typed` is what's in the box right now (for Enter, which can beat React's update).
+  function readForm(typed: { address?: string; port?: string } = {}): AgentConnection | null {
+    const address = (typed.address ?? settings.address).trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    const port = (typed.port ?? settings.port).trim() || "7122";
     if (!address) {
-      setStatus("Enter the Tinker Agent address.");
-      return;
+      setMessage({ tone: "error", text: "Enter the Agent's address, like 192.168.1.50." });
+      return null;
     }
     if (!/^\d+$/.test(port) || Number(port) < 1 || Number(port) > 65535) {
-      setStatus("Enter a valid port between 1 and 65535.");
-      return;
+      setMessage({ tone: "error", text: "The port must be a number between 1 and 65535." });
+      return null;
     }
-    if (!token) {
-      setStatus("Enter the Tinker Agent token.");
-      return;
-    }
+    return { address, port, token: settings.token.trim() };
+  }
 
-    setConnecting(true);
-    setStatus("Connecting…");
+  // Returns true when connected. Asks for the token when it's missing or wrong.
+  async function attempt(target: AgentConnection, fromTokenWindow = false): Promise<boolean> {
+    if (!target.token) {
+      setTokenPrompt({ target, error: null });
+      return false;
+    }
+    setMessage({ tone: "busy", text: `Connecting to ${target.address}…` });
     try {
-      await connect({ address, port, token });
-      setStatus("Connected successfully.");
+      const answer = await connect(target);
+      onSettingsChange({ ...settings, address: target.address, port: target.port, token: target.token });
+      setMessage({ tone: "ok", text: `Connected to ${answer.hostname || target.address}` });
+      setTokenPrompt(null);
+      return true;
     } catch (err) {
-      setStatus(errorMessage(err));
-    } finally {
-      setConnecting(false);
+      if (isUnauthenticated(err)) {
+        setMessage(null);
+        setTokenPrompt({
+          target: { ...target, token: "" },
+          error: fromTokenWindow || target.token ? "That token didn't work. Copy it again from the server PC." : null,
+        });
+      } else if (fromTokenWindow) {
+        setMessage(null);
+        setTokenPrompt({ target, error: errorMessage(err) });
+      } else {
+        setMessage({ tone: "error", text: errorMessage(err) });
+      }
+      return false;
     }
   }
 
-  async function onCreate() {
-    if (!clients || !name.trim() || !eula) return;
-    setBusy(true);
-    setCreateMsg("Downloading Minecraft… (can take a minute)");
-    try {
-      const res = await clients.servers.createServer({
-        name: name.trim(),
-        type,
-        version: version.trim(),
-        memoryMb,
-        port: 0,
-        acceptEula: eula,
-      });
-      setCreateMsg(
-        `Created "${res.server?.name}" (${res.server?.version}) on port ${res.server?.port}.`,
-      );
-      setName("");
-      await refresh();
-    } catch (err) {
-      setCreateMsg(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
+  function onConnectClick(typed: { address?: string; port?: string } = {}) {
+    if (busy) return;
+    const target = readForm(typed);
+    if (target) void attempt(target);
   }
 
-  async function onFind() {
-    if (!clients) return;
-    setImportMsg("Searching for servers…");
-    try {
-      const res = await clients.servers.findImportableServers({ folder: folder.trim() });
-      setFound(res.servers);
-      setImportMsg(res.servers.length ? "" : "No servers found there.");
-    } catch (err) {
-      setImportMsg(errorMessage(err));
-    }
+  function connectSaved(target: AgentConnection) {
+    onSettingsChange({ ...settings, address: target.address, port: target.port, token: target.token });
+    void attempt({ address: target.address, port: target.port, token: target.token });
   }
 
-  async function onImport(server: ImportableServer) {
-    if (!clients) return;
-    setImportingPath(server.path);
-    setImportMsg(`Copying ${server.suggestedName}…`);
-    try {
-      const res = await clients.servers.importServer({
-        path: server.path,
-        name: server.suggestedName,
-      });
-      setImportMsg(`Imported as "${res.server?.name}".`);
-      await refresh();
-    } catch (err) {
-      setImportMsg(errorMessage(err));
-    } finally {
-      setImportingPath(null);
-    }
-  }
+  const pill = connected
+    ? { variant: "connected" as const, label: "Connected" }
+    : lost
+      ? { variant: "connecting" as const, label: "Reconnecting…" }
+      : status === "connecting"
+        ? { variant: "connecting" as const, label: "Connecting…" }
+        : { variant: "disconnected" as const, label: "Not connected" };
 
-  async function run(action: () => Promise<unknown>) {
-    setActionMsg("");
-    try {
-      await action();
-      window.setTimeout(() => void refresh(), 500);
-    } catch (err) {
-      setActionMsg(errorMessage(err));
-    }
-  }
+  const cardTitle = connected
+    ? `Connected to ${hostName}`
+    : lost
+      ? `Reconnecting to ${hostName}…`
+      : status === "connecting"
+        ? "Connecting…"
+        : "Not connected";
+
+  const cardDetail =
+    clients && connection
+      ? [
+          `${connection.address}:${connection.port}`,
+          info ? `Agent v${info.agentVersion} on ${osName(info.os)}` : null,
+          lost && connectionError ? connectionError : connectedAt ? `Connected ${timeAgo(connectedAt, now)}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : connectionError ?? "Enter your Agent's address below, then press Connect.";
+
+  // The line next to the Connect button.
+  const statusLine: Message | null =
+    message ??
+    (connected
+      ? { tone: "ok", text: latencyMs !== null ? `Connected · ${latencyMs} ms` : "Connected" }
+      : lost && connectionError
+        ? { tone: "error", text: connectionError }
+        : !clients && connectionError
+          ? { tone: "error", text: connectionError }
+          : null);
 
   return (
-    <div className="flex h-full flex-col bg-[#0b0d10]">
-      <AppHeader
-        statusText={isConnected ? "Tinker Agent connected" : "No Tinker Agent connected"}
-        selectedServerLabel={selected ? servers.find((server) => server.id === selected)?.name ?? "Selected server" : "Selected server"}
-        selectedServerIcon="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"
-      />
-      <main className="flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto bg-[#0b0d10] px-6 py-12 mobile:px-4 mobile:pt-6">
-        <div className="flex w-full flex-col items-center">
-          <TabBar selected="connection-connected" amountOfModsInstalled="0" onNavigate={onNavigate} />
-          <section className="flex w-full flex-col items-start gap-6 rounded-3xl border border-solid border-[#1f242b] bg-[#111418] px-8 py-6 mobile:px-4">
-            <div className="flex w-full items-center justify-between gap-4">
-              <h1 className="font-['Inter'] text-[28px] font-[700] leading-[36px] text-[#ffffff]">
-                Connection
-              </h1>
-              <StatusPill variant={isConnected ? "conneted" : "disconnected"} />
+    <div className="flex w-full flex-col items-start rounded-[4px] bg-[#0b0d10] min-h-full font-['Inter']">
+      <PageShell
+        className="h-auto w-full flex-none"
+        header={<ConnectedHeader />}
+        tabs={
+          <TabBar selected={clients ? "connection-connected" : "connection-disconnected"} onNavigate={onNavigate} />
+        }
+        title="Connection"
+        subtitle="Manage the Tinker Agent this app talks to."
+        actions={<StatusPill variant={pill.variant} label={pill.label} />}
+      >
+        <div className="flex w-full flex-col items-start gap-4 rounded-xl border border-solid border-[#1f242b] bg-[#12151a] px-5 py-5 mobile:px-4">
+          <div className="flex w-full items-center gap-3">
+            <div
+              className={
+                connected
+                  ? "flex h-11 w-11 flex-none items-center justify-center rounded-[10px] border border-solid border-[#22c55e80] bg-[#0f2418]"
+                  : lost || status === "connecting"
+                    ? "flex h-11 w-11 flex-none items-center justify-center rounded-[10px] border border-solid border-[#f59e0b80] bg-[#2a1f0a]"
+                    : "flex h-11 w-11 flex-none items-center justify-center rounded-[10px] border border-solid border-[#2a3038] bg-[#1a1e23]"
+              }
+            >
+              <RoundWifi
+                className={`font-['Inter'] text-[22px] font-[400] leading-[24px] ${
+                  connected ? "text-[#86efac]" : lost || status === "connecting" ? "text-[#fcd34d]" : "text-[#9ca3af]"
+                }`}
+              />
             </div>
-            <div className="flex w-full flex-col items-start gap-6">
-              <div className="flex w-full flex-col items-start gap-4 rounded-xl border border-solid border-[#1f242b] bg-[#12151a] px-5 py-5 mobile:px-4">
-                <div className="flex w-full items-center gap-3">
-                  <div className="flex h-11 w-11 flex-none items-center justify-center rounded-[10px] border border-solid border-[#22c55e80] bg-[#0f2418]">
-                    <RoundWifi className="font-['Inter'] text-[22px] font-[400] leading-[24px] text-[#86efac]" />
-                  </div>
-                  <div className="flex grow shrink-0 basis-0 flex-col items-start gap-0.5">
-                    <span className="font-['Inter'] text-[18px] font-[700] leading-[26px] text-[#ffffff]">
-                      {isConnected ? `Connected to ${info?.hostname || "Tinker Agent"}` : "Tinker Agent is disconnected"}
-                    </span>
-                    <span className="font-['Inter'] text-[12px] font-[400] leading-[16px] text-[#7a828e]">
-                      {isConnected && connection
-                        ? `${connection.address}:${connection.port} · ${info?.os || "Agent"} · Version ${info?.agentVersion || "unknown"}`
-                        : "Enter your Agent connection details below to connect."}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex w-full items-center justify-center gap-2 mobile:grid mobile:grid-cols-1">
-                  <StatCard
-                    className="h-auto w-auto flex-none"
-                    icon={<TopSpeed20Filled />}
-                    label="Agent version"
-                    value={info?.agentVersion || "--"}
-                  />
-                  <StatCard
-                    className="h-auto w-auto flex-none"
-                    label="Host"
-                    value={info?.hostname || "--"}
-                  />
-                  <StatCard
-                    className="h-auto w-auto flex-none"
-                    icon={<RoundMemory />}
-                    label="CPU Usage"
-                    value={stats ? `${stats.cpuPercent.toFixed(0)}%` : "--"}
-                  />
-                  <StatCard
-                    className="h-auto w-auto flex-none"
-                    icon={<RoundSettingsEthernet />}
-                    label="Memory"
-                    value={
-                      stats
-                        ? `${(Number(stats.memUsedBytes) / 1024 ** 3).toFixed(1)} / ${(Number(stats.memTotalBytes) / 1024 ** 3).toFixed(1)} GB`
-                        : "--"
-                    }
-                  />
-                  <StatCard
-                    className="h-auto w-auto flex-none"
-                    label="Servers"
-                    value={isConnected ? String(servers.length) : "--"}
-                  />
-                </div>
+            <div className="flex grow shrink-0 basis-0 flex-col items-start gap-0.5">
+              <span className="font-['Inter'] text-[18px] font-[700] leading-[26px] text-[#ffffff]">{cardTitle}</span>
+              <span className="font-['Inter'] text-[12px] font-[400] leading-[16px] text-[#7a828e]">{cardDetail}</span>
+            </div>
+            {clients ? (
+              <PrimaryButton
+                icon={<RoundLogOut />}
+                text="Disconnect"
+                color="gray"
+                size="sm"
+                onClick={() => {
+                  disconnect();
+                  setMessage({ tone: "ok", text: "Disconnected. Your address and token are still saved." });
+                }}
+              />
+            ) : null}
+          </div>
+          <div className="w-full items-start gap-2 grid grid-cols-4 mobile:grid mobile:grid-cols-2">
+            <StatCard
+              className="h-auto grow shrink-0 basis-0 self-stretch"
+              icon={<TopSpeed20Filled />}
+              label="Latency"
+              value={connected && latencyMs !== null ? `${latencyMs} ms` : "—"}
+            />
+            <StatCard
+              className="h-auto grow shrink-0 basis-0 self-stretch"
+              icon={<RoundSettingsEthernet />}
+              label="Connection"
+              value={clients && connection ? connectionKind(connection.address) : "—"}
+            />
+            <StatCard
+              className="h-auto grow shrink-0 basis-0 self-stretch"
+              icon={<RoundSettingsEthernet />}
+              label="Agent version"
+              value={info && clients ? `v${info.agentVersion}` : "—"}
+            />
+            <StatCard
+              className="h-auto grow shrink-0 basis-0 self-stretch"
+              icon={<RoundTimer />}
+              label="Agent uptime"
+              value="—"
+              title={NOT_YET}
+            />
+            <StatCard
+              className="h-auto grow shrink-0 basis-0 self-stretch"
+              icon={<RoundTimer />}
+              label="Host uptime"
+              value="—"
+              title={NOT_YET}
+            />
+            <StatCard
+              className="h-auto grow shrink-0 basis-0 self-stretch"
+              icon={<RoundMemory />}
+              label="Host CPU"
+              value={live ? `${Math.round(stats.cpuPercent)}%` : "—"}
+            />
+            <StatCard
+              className="h-auto grow shrink-0 basis-0 self-stretch"
+              icon={<RoundMemory />}
+              label="Host memory"
+              value={live ? `${formatGB(stats.memUsedBytes)} / ${formatGB(stats.memTotalBytes)} GB` : "—"}
+            />
+            <StatCard
+              className="h-auto grow shrink-0 basis-0 self-stretch"
+              icon={<RoundFolderZip />}
+              label="Storage"
+              value="—"
+              title={NOT_YET}
+            />
+          </div>
+        </div>
+        <div className="w-full items-start gap-6 grid grid-cols-2 mobile:grid mobile:grid-cols-1">
+          <SectionCard
+            title="Tinker Agent address"
+            description="The PC running Tinker Agent. The installer prints it at the end."
+          >
+            <div className="flex w-full flex-col items-start gap-4 px-5 py-5 mobile:px-4">
+              <div className="flex w-full items-start mobile:flex-col mobile:gap-3">
+                <InputField
+                  className="min-w-0 grow shrink basis-0 mobile:w-full"
+                  required={true}
+                  title="Address"
+                  input={
+                    <input
+                      className="h-10 min-w-[0px] grow shrink-0 basis-0 rounded-l-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus:border-[#22c55e]"
+                      placeholder="192.168.1.xxx"
+                      value={settings.address}
+                      type="text"
+                      spellCheck={false}
+                      onChange={(event) => onSettingsChange({ ...settings, address: event.target.value })}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") onConnectClick({ address: event.currentTarget.value });
+                      }}
+                    />
+                  }
+                />
+                <InputField
+                  className="h-auto w-32 flex-none mobile:w-full"
+                  required={true}
+                  title="Port"
+                  input={
+                    <input
+                      className="h-10 w-28 flex-none rounded-r-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus:border-[#22c55e] mobile:grow mobile:shrink-0 mobile:basis-0"
+                      placeholder="7122"
+                      value={settings.port}
+                      type="text"
+                      inputMode="numeric"
+                      onChange={(event) => onSettingsChange({ ...settings, port: event.target.value })}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") onConnectClick({ port: event.currentTarget.value });
+                      }}
+                    />
+                  }
+                />
               </div>
-              <div className="flex w-full items-start gap-6">
-                <div className="flex grow shrink-0 basis-0 flex-col items-start gap-3">
-                  <span className="font-['Inter'] text-[16px] font-[700] leading-[24px] text-[#ffffff]">
-                    Tinker Agent
-                  </span>
-                  <div className="flex w-full flex-col items-start gap-5 rounded-xl border border-solid border-[#1f242b] bg-[#12151a] px-5 py-5 mobile:px-4">
-                    <div className="flex w-full items-end gap-4 mobile:flex-col mobile:items-start">
-                      <div className="flex grow shrink-0 basis-0 flex-col items-start gap-2 mobile:grow-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#c4c9d1]">
-                            Tinker Agent Link
-                          </span>
-                          <span className="font-['Inter'] text-[13px] font-[500] leading-[20px] text-[#3b9eff] underline hover:text-[#7cbcff]">
-                            learn more
-                          </span>
-                        </div>
-                        <div className="flex w-full items-center gap-1">
-                          <input
-                            className={`${inputClass} w-52 flex-none`}
-                            placeholder="Address (eg. 192.168.1.xxx)"
-                            value={settings.address}
-                            onChange={(event) =>
-                              onSettingsChange({ ...settings, address: event.target.value })
-                            }
-                            type="text"
-                          />
-                          <input
-                            className={`${inputClass} w-32 flex-none`}
-                            placeholder="Port (eg. 7122)"
-                            value={settings.port}
-                            onChange={(event) =>
-                              onSettingsChange({ ...settings, port: event.target.value })
-                            }
-                            type="number"
-                            min="1"
-                            max="65535"
-                          />
-                          <input
-                            className={`${inputClass} min-w-40 grow`}
-                            placeholder="Agent token"
-                            value={settings.token}
-                            onChange={(event) =>
-                              onSettingsChange({ ...settings, token: event.target.value })
-                            }
-                            type="password"
-                            autoComplete="current-password"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex h-px w-full flex-none items-start bg-[#1f242b]" />
-                    <div className="flex w-full flex-wrap items-center gap-3">
+              <div className="flex w-full flex-wrap items-center gap-3 border-t border-solid border-[#1f242b] pt-4">
+                <PrimaryButton
+                  icon={<RoundLogIn />}
+                  text={busy ? "Connecting…" : clients ? "Reconnect" : "Connect"}
+                  disabled={busy}
+                  onClick={() => onConnectClick()}
+                />
+                {statusLine ? (
+                  <div className="flex min-w-0 items-center gap-1">
+                    {statusLine.tone === "busy" ? (
+                      <Loader className="text-[14px] text-[#9ca3af]" />
+                    ) : statusLine.tone === "ok" ? (
+                      <RoundCheckCircleOutline className="font-['Inter'] text-[14px] font-[400] leading-[16px] text-[#86efac]" />
+                    ) : (
+                      <OutlineCancel className="font-['Inter'] text-[14px] font-[400] leading-[16px] text-[#fca5a5]" />
+                    )}
+                    <span
+                      className={`font-['Inter'] text-[12px] font-[500] leading-[16px] ${
+                        statusLine.tone === "busy"
+                          ? "text-[#9ca3af]"
+                          : statusLine.tone === "ok"
+                            ? "text-[#86efac]"
+                            : "text-[#fca5a5]"
+                      }`}
+                    >
+                      {statusLine.text}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Security & network" description="How Dash reaches the Agent.">
+            <SettingRow
+              title="Allow self-signed certificates"
+              description="Coming soon. The Agent doesn't use HTTPS yet, so there's no certificate to check."
+              control={<Switch checked={false} disabled={true} />}
+              divider={true}
+            />
+            <SettingRow
+              title="Connection Tunnel"
+              description="Use Tinker outside your home network without Tailscale or port forwarding."
+              badge={<Badge label="Plus" variant="plus" />}
+              control={<Switch checked={false} disabled={true} />}
+              divider={true}
+            />
+            <SettingRow
+              title="Auto connect"
+              description="When Tinker opens, connect to this Agent with your saved token."
+              control={
+                <Switch
+                  checked={settings.autoConnect}
+                  onCheckedChange={(autoConnect: boolean) => onSettingsChange({ ...settings, autoConnect })}
+                />
+              }
+            />
+          </SectionCard>
+        </div>
+        <SectionCard
+          title="Saved Agents"
+          description="Switch between server PCs you've connected to before."
+          headerAction={
+            <PrimaryButton
+              icon={<RoundAdd />}
+              text={currentId && savedAgents.some((a) => a.id === currentId) ? "Update saved Agent" : "Save Current Agent"}
+              color="gray"
+              size="sm"
+              disabled={!clients}
+              onClick={() => {
+                if (!clients) return;
+                saveCurrentAgent();
+                setMessage({ tone: "ok", text: `Saved ${hostName}` });
+              }}
+            />
+          }
+        >
+          {savedAgents.length === 0 ? (
+            <div className="flex w-full px-5 py-4">
+              <span className="font-['Inter'] text-[13px] font-[400] leading-[18px] text-[#7a828e]">
+                Nothing saved yet. Connect to an Agent, then press Save Current Agent.
+              </span>
+            </div>
+          ) : (
+            savedAgents.map((saved, index) => {
+              const kind = connectionKind(saved.address);
+              const isCurrent = saved.id === currentId;
+              return (
+                <SettingRow
+                  key={saved.id}
+                  title={saved.name}
+                  description={[
+                    saved.id,
+                    kind,
+                    saved.agentVersion ? `Agent v${saved.agentVersion}` : null,
+                    !isCurrent && saved.lastConnectedAt ? `Last connected ${timeAgo(saved.lastConnectedAt, now)}` : null,
+                    saved.token ? null : "Signed out",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  badge={
+                    isCurrent ? <Badge label="Current" variant="green" /> : <Badge label={kind} variant={kindBadge[kind]} />
+                  }
+                  control={
+                    <>
                       <PrimaryButton
-                        icon={<RoundLogIn />}
-                        text={connecting ? "Connecting…" : "Connect"}
-                        disabled={connecting}
-                        onClick={connecting ? undefined : onConnect}
+                        icon={<RoundDelete />}
+                        text="Forget"
+                        color="gray-dangerous"
+                        size="sm"
+                        onClick={() => forgetSavedAgent(saved.id)}
                       />
-                      {isConnected && (
+                      {isCurrent ? null : (
                         <PrimaryButton
-                          color="gray-dangerous"
-                          text="Disconnect"
+                          icon={<RoundLogIn />}
+                          text="Connect"
+                          size="sm"
+                          disabled={busy}
                           onClick={() => {
-                            disconnect();
-                            setStatus("");
-                            setSelected(null);
+                            if (!busy) connectSaved(saved);
                           }}
                         />
                       )}
-                      {(status || connectionError) && (
-                        <div
-                          className={`flex items-center gap-1 text-[12px] ${status === "Connected successfully." ? "text-[#86efac]" : "text-[#fca5a5]"}`}
-                          role="status"
-                        >
-                          {status === "Connected successfully." && <RoundCheckCircleOutline />}
-                          <span>{status || connectionError}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex grow shrink-0 basis-0 flex-col items-start gap-3 self-stretch">
-                  <span className="font-['Inter'] text-[16px] font-[700] leading-[24px] text-[#ffffff]">
-                    Security &amp; network
-                  </span>
-                  <div className="flex w-full grow shrink-0 basis-0 flex-col items-start justify-center rounded-xl border border-solid border-[#1f242b] bg-[#12151a]">
-                    <div className="flex w-full items-center gap-4 px-5 py-4 mobile:px-4">
-                      <div className="flex grow shrink-0 basis-0 flex-col items-start gap-0.5">
-                        <span className="font-['Inter'] text-[15px] font-[600] leading-[22px] text-[#ffffff]">
-                          Allow self-signed certificates
-                        </span>
-                        <span className="font-['Inter'] text-[12px] font-[400] leading-[16px] text-[#7a828e]">
-                          If connection is failing, try enabling or disabling.
-                        </span>
-                      </div>
-                      <Switch
-                        checked={settings.allowSelfSignedCertificates}
-                        onCheckedChange={(allowSelfSignedCertificates) =>
-                          onSettingsChange({ ...settings, allowSelfSignedCertificates })
-                        }
-                      />
-                    </div>
-                    <div className="flex h-px w-full flex-none items-start bg-[#1f242b]" />
-                    <div className="flex w-full items-center gap-4 px-5 py-4 mobile:px-4">
-                      <div className="flex grow shrink-0 basis-0 flex-col items-start gap-0.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-['Inter'] text-[15px] font-[600] leading-[22px] text-[#ffffff]">
-                            Use Connection Tunnel (no Tailscale, etc)
-                          </span>
-                          <div className="flex items-center rounded-[9999px] border border-solid border-[#a855f7] bg-[#2e1450] px-1.5 py-0.5">
-                            <span className="font-['Inter'] text-[11px] font-[600] leading-[14px] text-[#e9d5ff]">
-                              Plus
-                            </span>
-                          </div>
-                        </div>
-                        <span className="font-['Inter'] text-[12px] font-[400] leading-[16px] text-[#7a828e]">
-                          Makes using Tinker outside your home network seamless.
-                          This feature requires Plus.
-                        </span>
-                      </div>
-                      <Switch
-                        checked={false}
-                        disabled={true}
-                        onCheckedChange={() => {}}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex w-full flex-col items-start gap-3">
-                <span className="font-['Inter'] text-[16px] font-[700] leading-[24px] text-[#ffffff]">
-                  Startup
-                </span>
-                <div className="flex w-full flex-col items-start rounded-xl border border-solid border-[#1f242b] bg-[#12151a]">
-                  <div className="flex w-full items-center gap-4 px-5 py-4 mobile:px-4">
-                    <div className="flex grow shrink-0 basis-0 flex-col items-start gap-0.5">
-                      <span className="font-['Inter'] text-[15px] font-[600] leading-[22px] text-[#ffffff]">
-                        Auto Connect
-                      </span>
-                      <span className="font-['Inter'] text-[12px] font-[400] leading-[16px] text-[#7a828e]">
-                        When Tinker opens, auto connect with my saved
-                        credentials.
-                      </span>
-                    </div>
-                    <Switch
-                      checked={settings.autoConnect}
-                      onCheckedChange={(autoConnect) =>
-                        onSettingsChange({ ...settings, autoConnect })
-                      }
-                    />
-                  </div>
-                </div>
-
-                {isConnected && clients ? (
-                  <>
-                    <section className="flex w-full flex-col gap-4 rounded-xl border border-solid border-[#1f242b] bg-[#12151a] p-5 mobile:px-4">
-                      <div className="flex w-full items-center justify-between gap-3">
-                        <h2 className="font-['Inter'] text-[18px] font-[700] text-white">Managed servers</h2>
-                        <button
-                          className={`${inputClass} cursor-pointer`}
-                          type="button"
-                          onClick={() => void refresh()}
-                        >
-                          Refresh
-                        </button>
-                      </div>
-                      {listError && <p className="text-sm text-[#fca5a5]" role="alert">{listError}</p>}
-                      {servers.length === 0 && !listError && (
-                        <p className="text-sm text-[#7a828e]">No servers found on this Agent.</p>
-                      )}
-                      {servers.map((server) => (
-                        <div
-                          key={server.id}
-                          className="flex flex-wrap items-center gap-3 border-t border-[#1f242b] pt-3"
-                        >
-                          <span className={server.running ? "text-[#86efac]" : "text-[#7a828e]"}>●</span>
-                          <span className="min-w-0 grow text-sm text-white">
-                            {server.name} · {ServerType[server.type]} {server.version} · port {server.port}
-                          </span>
-                          <button
-                            className={`${inputClass} cursor-pointer`}
-                            type="button"
-                            onClick={() => setSelected(server.id)}
-                          >
-                            Console
-                          </button>
-                          <button
-                            className={`${inputClass} cursor-pointer`}
-                            type="button"
-                            onClick={() =>
-                              void run(() =>
-                                server.running
-                                  ? clients.servers.stopServer({ serverId: server.id })
-                                  : clients.servers.startServer({ serverId: server.id }),
-                              )
-                            }
-                          >
-                            {server.running ? "Stop" : "Start"}
-                          </button>
-                        </div>
-                      ))}
-                      {actionMsg && <p className="text-sm text-[#fca5a5]" role="alert">{actionMsg}</p>}
-                      {selected && (
-                        <div className="flex flex-col gap-3 border-t border-[#1f242b] pt-4">
-                          <h3 className="font-['Inter'] font-[600] text-white">
-                            Console: {servers.find((server) => server.id === selected)?.name ?? selected}
-                          </h3>
-                          <pre className="h-48 overflow-auto whitespace-pre-wrap rounded-md bg-black p-3 text-xs text-[#c4c9d1]">
-                            {lines.join("\n") || "Waiting for console output…"}
-                          </pre>
-                          <form
-                            className="flex gap-2"
-                            onSubmit={(event) => {
-                              event.preventDefault();
-                              if (!clients || !command.trim()) return;
-                              void run(() =>
-                                clients.servers.sendCommand({
-                                  serverId: selected,
-                                  command: command.trim(),
-                                }),
-                              );
-                              setCommand("");
-                            }}
-                          >
-                            <input
-                              className={`${inputClass} grow`}
-                              placeholder="Send a server command"
-                              value={command}
-                              onChange={(event) => setCommand(event.target.value)}
-                            />
-                            <button
-                              className="rounded-[8px] bg-[#22c55e] px-4 font-['Inter'] text-sm font-[600] text-[#04130a] disabled:opacity-50"
-                              type="submit"
-                              disabled={!command.trim()}
-                            >
-                              Send
-                            </button>
-                          </form>
-                        </div>
-                      )}
-                    </section>
-
-                    <section className="grid w-full grid-cols-2 gap-4 mobile:grid-cols-1">
-                      <div className="flex flex-col gap-3 rounded-xl border border-solid border-[#1f242b] bg-[#12151a] p-5 mobile:px-4">
-                        <h2 className="font-['Inter'] text-[16px] font-[700] text-white">Create a server</h2>
-                        <input
-                          className={inputClass}
-                          placeholder="Server name"
-                          value={name}
-                          onChange={(event) => setName(event.target.value)}
-                        />
-                        <div className="flex flex-wrap gap-3">
-                          <select
-                            className={`${inputClass} grow`}
-                            value={type}
-                            onChange={(event) => setType(Number(event.target.value) as ServerType)}
-                          >
-                            <option value={ServerType.VANILLA}>Vanilla</option>
-                            <option value={ServerType.PAPER}>Paper</option>
-                            <option value={ServerType.FABRIC}>Fabric</option>
-                          </select>
-                          <input
-                            className={`${inputClass} grow`}
-                            placeholder="Version (blank = latest)"
-                            value={version}
-                            onChange={(event) => setVersion(event.target.value)}
-                          />
-                        </div>
-                        <label className="flex items-center gap-3 text-sm text-[#c4c9d1]">
-                          Memory
-                          <input
-                            className={`${inputClass} w-32`}
-                            type="number"
-                            min="512"
-                            step="512"
-                            value={memoryMb}
-                            onChange={(event) => setMemoryMb(Number(event.target.value))}
-                          />
-                          MB
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-[#c4c9d1]">
-                          <input
-                            type="checkbox"
-                            checked={eula}
-                            onChange={(event) => setEula(event.target.checked)}
-                          />
-                          I agree to the{" "}
-                          <a
-                            className="text-[#3b9eff] underline"
-                            href="https://aka.ms/MinecraftEULA"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Minecraft EULA
-                          </a>
-                        </label>
-                        <button
-                          className="self-start rounded-[8px] bg-[#22c55e] px-4 py-2 font-['Inter'] text-sm font-[600] text-[#04130a] disabled:opacity-50"
-                          type="button"
-                          disabled={busy || !name.trim() || !eula}
-                          onClick={() => void onCreate()}
-                        >
-                          {busy ? "Creating…" : "Create server"}
-                        </button>
-                        {createMsg && <p className="text-sm text-[#c4c9d1]" role="status">{createMsg}</p>}
-                      </div>
-
-                      <div className="flex flex-col gap-3 rounded-xl border border-solid border-[#1f242b] bg-[#12151a] p-5 mobile:px-4">
-                        <h2 className="font-['Inter'] text-[16px] font-[700] text-white">Import a server</h2>
-                        <div className="flex gap-2">
-                          <input
-                            className={`${inputClass} grow`}
-                            placeholder="Folder on the Agent (blank = search Crafty folders)"
-                            value={folder}
-                            onChange={(event) => setFolder(event.target.value)}
-                          />
-                          <button
-                            className="rounded-[8px] border border-[#2a3038] bg-[#1a1e23] px-3 text-sm text-white disabled:opacity-50"
-                            type="button"
-                            onClick={() => void onFind()}
-                          >
-                            Find
-                          </button>
-                        </div>
-                        {found.map((server) => (
-                          <div key={server.path} className="flex flex-wrap items-center gap-2 text-sm text-[#c4c9d1]">
-                            <span className="min-w-0 grow">
-                              {server.suggestedName} · {server.jar} · port {server.port}
-                              <span className="block break-all text-xs text-[#7a828e]">{server.path}</span>
-                            </span>
-                            <button
-                              className="rounded-[8px] border border-[#2a3038] bg-[#1a1e23] px-3 py-2 text-white disabled:opacity-50"
-                              type="button"
-                              disabled={importingPath !== null}
-                              onClick={() => void onImport(server)}
-                            >
-                              {importingPath === server.path ? "Importing…" : "Import"}
-                            </button>
-                          </div>
-                        ))}
-                        {importMsg && <p className="text-sm text-[#c4c9d1]" role="status">{importMsg}</p>}
-                      </div>
-                    </section>
-                  </>
-                ) : (
-                  <p className="w-full rounded-xl border border-solid border-[#1f242b] bg-[#12151a] p-5 text-sm text-[#7a828e]">
-                    Connect to an Agent to view live stats and manage its Minecraft servers.
-                  </p>
-                )}
-              </div>
-            </div>
-          </section>
+                    </>
+                  }
+                  divider={index < savedAgents.length - 1}
+                />
+              );
+            })
+          )}
+        </SectionCard>
+        <div className="w-full items-start gap-6 grid grid-cols-2 mobile:grid mobile:grid-cols-1">
+          <SectionCard title="Account" description="How you're signed in to this Agent.">
+            <SettingRow
+              title={clients ? "Signed in with the Agent token" : "Not signed in"}
+              description={
+                clients
+                  ? `Full access to every server on ${hostName}. Anyone with this token can control the Agent.`
+                  : settings.token.trim()
+                    ? "Your token is saved. Press Connect to sign in again."
+                    : "Press Connect and paste the token from your server PC."
+              }
+              badge={clients ? <Badge label="Administrator" icon={<RoundStarFilled />} variant="amber" /> : undefined}
+              control={
+                <PrimaryButton
+                  icon={<RoundLogOut />}
+                  text="Sign out"
+                  color="gray"
+                  size="sm"
+                  disabled={!clients}
+                  onClick={() => {
+                    if (!clients) return;
+                    signOut();
+                    onSettingsChange({ ...settings, token: "" });
+                    setMessage({ tone: "ok", text: "Signed out. The token was removed from this computer." });
+                  }}
+                />
+              }
+            />
+          </SectionCard>
+          <SectionCard title="Help" description="Stuck connecting? Start here.">
+            <SettingRow
+              title="Can't connect?"
+              description="Check the Agent, address, firewall and token step by step."
+              control={
+                <PrimaryButton
+                  icon={<RoundSearch />}
+                  text="Troubleshooting guide"
+                  color="gray"
+                  size="sm"
+                  onClick={() => setHelpOpen(true)}
+                />
+              }
+            />
+          </SectionCard>
         </div>
-      </main>
+      </PageShell>
+
+      <TokenDialog
+        open={tokenPrompt !== null}
+        error={tokenPrompt?.error}
+        onClose={() => setTokenPrompt(null)}
+        onSubmit={async (token) => {
+          if (!tokenPrompt) return;
+          const ok = await attempt({ ...tokenPrompt.target, token }, true);
+          if (!ok) throw new Error("not connected");
+        }}
+      />
+
+      <ShellDialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        icon={<BaselineHelp />}
+        title="Can't connect?"
+        description="Go through these in order. Most problems are the first two."
+        className="w-[560px]"
+        footer={<PrimaryButton icon={null} text="Close" color="gray" onClick={() => setHelpOpen(false)} />}
+      >
+        {[
+          ["Is the Agent running?", "On the server PC, run: systemctl status tinker-agent — it should say “active (running)”."],
+          ["Is the address right?", "Use the server PC's local IP, like 192.168.1.50. On the server PC, run: hostname -I"],
+          ["Is the port open?", "On the server PC, run: sudo ufw allow from 192.168.0.0/16 to any port 7122 proto tcp"],
+          ["Is the token right?", "On the server PC, run: sudo cat /etc/tinker-agent.env and copy the TINKER_TOKEN value."],
+          ["Same network?", "This computer and the server PC need to be on the same Wi-Fi, or both on Tailscale."],
+        ].map(([title, body], index) => (
+          <div key={title} className="flex w-full items-start gap-3">
+            <div className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-solid border-[#22c55e80] bg-[#0f2418]">
+              <span className="font-['Inter'] text-[12px] font-[700] leading-[16px] text-[#86efac]">{index + 1}</span>
+            </div>
+            <div className="flex grow shrink-0 basis-0 flex-col items-start gap-0.5">
+              <span className="font-['Inter'] text-[14px] font-[600] leading-[20px] text-[#ffffff]">{title}</span>
+              <span className="font-['Inter'] text-[13px] font-[400] leading-[18px] text-[#9ca3af]">{body}</span>
+            </div>
+          </div>
+        ))}
+      </ShellDialog>
     </div>
   );
 }

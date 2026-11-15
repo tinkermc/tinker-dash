@@ -5,6 +5,28 @@ import type { WatchHostStatsResponse } from "../gen/tinker/v1/agent_pb";
 import type { Server } from "../gen/tinker/v1/server_pb";
 import { useAgent } from "./AgentContext";
 import { errorMessage } from "./agent";
+import { useServerConsole } from "./ConsoleContext";
+import { serverStatus } from "./status";
+
+// The selected server, its status pill, and its live console.
+// The real Subframe pages use this. (useServers/useConsole below are the
+// simpler hooks the Agent test page uses.)
+export function useSelectedServer() {
+  const { selectedServer, pending } = useAgent();
+  const console = useServerConsole();
+  const status = serverStatus(selectedServer, selectedServer ? pending[selectedServer.id] : undefined, console.state);
+  return { server: selectedServer, status, console };
+}
+
+// The current time, updated every `everyMs`, for "3m ago" style labels.
+export function useNow(everyMs = 1000) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), everyMs);
+    return () => window.clearInterval(timer);
+  }, [everyMs]);
+  return now;
+}
 
 // The list of servers. Call refresh() after creating/importing/starting one.
 export function useServers() {

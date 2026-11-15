@@ -1,9 +1,10 @@
-// How Dash talks to the Tinker Agent. Pages never import this directly:
+// How Dash talks to the Tinker Agent. Pages never import the clients directly:
 // they use useAgent() from AgentContext.tsx.
 import { Code, ConnectError, createClient, type Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { AgentService } from "../gen/tinker/v1/agent_pb";
-import { ServerService } from "../gen/tinker/v1/server_pb";
+import { ServerService, ServerType } from "../gen/tinker/v1/server_pb";
+import { readPref, writePref } from "./prefs";
 
 // What the user types on the Connection tab.
 export type AgentConnection = {
@@ -12,21 +13,25 @@ export type AgentConnection = {
   token: string;
 };
 
+// An Agent the user saved on the Connection tab ("Saved Agents").
+export type SavedAgent = AgentConnection & {
+  id: string; // "address:port"
+  name: string; // the server PC's hostname
+  agentVersion?: string;
+  lastConnectedAt?: number;
+};
+
 const STORAGE_KEY = "tinker.connection";
 const AUTO_CONNECT_STORAGE_KEY = "tinker.autoConnect";
+const SAVED_AGENTS_KEY = "tinker.savedAgents";
 
 // Remember the last connection so Dash can auto-connect next time.
 export function loadConnection(): AgentConnection | null {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? (JSON.parse(saved) as AgentConnection) : null;
-  } catch {
-    return null;
-  }
+  return readPref<AgentConnection | null>(STORAGE_KEY, null);
 }
 
 export function saveConnection(connection: AgentConnection) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(connection));
+  writePref(STORAGE_KEY, connection);
 }
 
 export function forgetConnection() {
@@ -39,6 +44,18 @@ export function loadAutoConnect(): boolean {
 
 export function saveAutoConnect(autoConnect: boolean) {
   localStorage.setItem(AUTO_CONNECT_STORAGE_KEY, String(autoConnect));
+}
+
+export function loadSavedAgents(): SavedAgent[] {
+  return readPref<SavedAgent[]>(SAVED_AGENTS_KEY, []);
+}
+
+export function storeSavedAgents(agents: SavedAgent[]) {
+  writePref(SAVED_AGENTS_KEY, agents);
+}
+
+export function agentId(connection: Pick<AgentConnection, "address" | "port">): string {
+  return `${connection.address.trim()}:${connection.port.trim() || "7122"}`;
 }
 
 // makeClients builds one "client" per service in the .proto files.
@@ -60,6 +77,17 @@ export function makeClients(connection: AgentConnection) {
 
 export type AgentClients = ReturnType<typeof makeClients>;
 
+export function isUnauthenticated(err: unknown): boolean {
+  return ConnectError.from(err).code === Code.Unauthenticated;
+}
+
+function sentence(text: string): string {
+  const t = text.trim();
+  if (!t) return "Something went wrong.";
+  const first = t.charAt(0).toUpperCase() + t.slice(1);
+  return /[.!?)]$/.test(first) ? first : `${first}.`;
+}
+
 // Turns any error from the Agent into a sentence you can show the user.
 export function errorMessage(err: unknown): string {
   const e = ConnectError.from(err);
@@ -71,10 +99,29 @@ export function errorMessage(err: unknown): string {
       if (e.rawMessage.toLowerCase().includes("fetch")) {
         return "Can't reach the Agent. Check the address, that the server PC is on, and that you're on the same network.";
       }
-      return e.rawMessage;
+      return sentence(e.rawMessage);
     case Code.DeadlineExceeded:
       return "The Agent took too long to answer.";
+    case Code.Canceled:
+      return "Cancelled.";
     default:
-      return e.rawMessage; // the Agent's own message, like "you must accept the Minecraft EULA…"
+      return sentence(e.rawMessage); // the Agent's own message, like "you must accept the Minecraft EULA…"
   }
 }
+
+export function serverTypeLabel(type: ServerType): string {
+  switch (type) {
+    case ServerType.VANILLA:
+      return "Vanilla";
+    case ServerType.PAPER:
+      return "Paper";
+    case ServerType.FABRIC:
+      return "Fabric";
+    default:
+      return "Other";
+  }
+}
+
+// The Agent doesn't send server icons yet, so every server uses this grass block.
+export const DEFAULT_SERVER_ICON =
+  "https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png";

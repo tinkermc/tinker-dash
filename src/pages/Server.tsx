@@ -1,17 +1,21 @@
-
-
-
-import { AppHeader } from "@/ui/components/AppHeader";
 import { ConsoleServerHeader } from "@/ui/components/ConsoleServerHeader";
+import { InputField } from "@/ui/components/InputField";
+import { PageShell } from "@/ui/components/PageShell";
 import { PrimaryButton } from "@/ui/components/PrimaryButton";
+import { SectionCard } from "@/ui/components/SectionCard";
+import { SelectField } from "@/ui/components/SelectField";
+import { SettingRow } from "@/ui/components/SettingRow";
+import { StatCard } from "@/ui/components/StatCard";
+import { StatusPill } from "@/ui/components/StatusPill";
+import { Switch } from "@/ui/components/Switch";
 import { TabBar } from "@/ui/components/TabBar";
-import type { PageProps } from "./types";
-import { UnsavedChangesPrompt } from "@/ui/components/UnsavedChangesPrompt";
 import OutlineLabel from "@/ui/icons/OutlineLabel";
-import RoundCode from "@/ui/icons/RoundCode";
+import RoundAdd from "@/ui/icons/RoundAdd";
+import RoundDelete from "@/ui/icons/RoundDelete";
+import RoundImage from "@/ui/icons/RoundImage";
+import RoundManageAccounts from "@/ui/icons/RoundManageAccounts";
 import RoundMemory from "@/ui/icons/RoundMemory";
 import RoundPeople from "@/ui/icons/RoundPeople";
-import RoundPersonAddAlt1 from "@/ui/icons/RoundPersonAddAlt1";
 import RoundPlayArrow from "@/ui/icons/RoundPlayArrow";
 import RoundRefresh from "@/ui/icons/RoundRefresh";
 import RoundSettingsEthernet from "@/ui/icons/RoundSettingsEthernet";
@@ -20,273 +24,321 @@ import RoundStop from "@/ui/icons/RoundStop";
 import RoundTimer from "@/ui/icons/RoundTimer";
 import RoundTroubleshoot from "@/ui/icons/RoundTroubleshoot";
 import RoundUpload from "@/ui/icons/RoundUpload";
-import Versions from "@/ui/icons/Versions";
+import TopSpeed20Filled from "@/ui/icons/TopSpeed20Filled";
+import { ConnectedHeader } from "../components/ConnectedHeader";
+import { inputClass, previewClass, textareaClass } from "../components/fields";
+import { PreviewBanner, ServerGate, SoonBadge } from "../components/PageStates";
+import { usePrompt } from "../components/PromptDialog";
+import { useAgent } from "../lib/AgentContext";
+import { DEFAULT_SERVER_ICON, serverTypeLabel } from "../lib/agent";
+import { useHostStats, useNow, useSelectedServer } from "../lib/hooks";
+import { formatDuration, formatGB } from "../lib/minecraft";
+import { useUi } from "../lib/UiContext";
+import type { PageProps } from "./types";
+
+const NOT_YET = "Needs an Agent update";
 
 function Server({ onNavigate }: PageProps) {
+  const { pending, startServer, stopServer, restartServer } = useAgent();
+  const { server, status, console: live } = useSelectedServer();
+  const { openCreateServer, openImportServer } = useUi();
+  const stats = useHostStats();
+  const now = useNow(10_000);
+  const [prompt, ask] = usePrompt();
+
+  const running = server?.running ?? false;
+  const action = server ? pending[server.id] : undefined;
+  const busy = action !== undefined;
+  const online = Object.values(live.state.players).filter((p) => p.online);
+  const maxPlayers = live.state.maxPlayers;
+  const memoryGb = server ? String(Math.round((server.memoryMb / 1024) * 10) / 10) : "";
+  const hostTotalGb = stats ? formatGB(stats.memTotalBytes) : null;
+
+  // Stopping or restarting kicks everyone, so ask first when people are online.
+  function guarded(kind: "stop" | "restart") {
+    if (!server || busy) return;
+    const run = () => void (kind === "stop" ? stopServer(server.id) : restartServer(server.id));
+    if (online.length === 0) {
+      run();
+      return;
+    }
+    ask({
+      title: kind === "stop" ? `Stop ${server.name}?` : `Restart ${server.name}?`,
+      description: `${online.length} player${online.length === 1 ? " is" : "s are"} online and will be disconnected. The world is saved first.`,
+      icon: kind === "stop" ? <RoundStop /> : <RoundRefresh />,
+      tone: "danger",
+      confirmText: kind === "stop" ? "Stop server" : "Restart server",
+      confirmColor: kind === "stop" ? "red" : "gray-warning",
+      onConfirm: run,
+    });
+  }
+
   return (
-    <div className="flex h-full flex-col bg-[#0b0d10]">
-      <AppHeader
-        statusText="No servers running"
-        selectedServerLabel="Selected server"
-        selectedServerIcon="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"/>
-      <main className="flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto bg-[#0b0d10] px-6 py-12 mobile:px-4 mobile:pt-6">
-        <div className="flex w-full flex-col items-center">
-          <TabBar selected="server" amountOfModsInstalled="0" onNavigate={onNavigate} />
-          <section className="flex w-full flex-col items-start gap-6 rounded-3xl border border-solid border-[#1f242b] bg-[#111418] px-8 py-6 mobile:px-4">
-            <div className="flex w-full items-center justify-between gap-4">
-              <h1 className="font-['Inter'] text-[28px] font-[700] leading-[36px] text-[#ffffff]">
-                Server
-              </h1>
-            </div>
-            <div className="flex w-full flex-col items-start gap-5 rounded-2xl border border-solid border-[#1f242b] bg-[#0e1114] px-6 py-5 mobile:px-4">
-              <div className="flex w-full items-center gap-4 mobile:flex-col mobile:items-start">
-                <div className="flex grow shrink-0 basis-0 items-center gap-3">
-                  <ConsoleServerHeader
-                    image="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"
-                    name="Vanilla SMP"
-                    loader="Vanilla"
-                    version="1.21.1"
-                    port="25565"
-                    currentPlayers="1"
-                    maxPlayers="20"
-                  />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-2 rounded-[9999px] border border-solid border-[#22c55e] bg-[#123321] px-3 py-1">
-                    <RoundTroubleshoot className="font-['Inter'] text-[14px] font-[400] leading-[16px] text-[#22c55e]" />
-                    <span className="font-['Inter'] text-[13px] font-[500] leading-[18px] text-[#ffffff]">
-                      Healthy
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-[9999px] border border-solid border-[#22c55e] bg-[#123321] px-3 py-1">
-                    <div className="flex h-2 w-2 flex-none items-start rounded-[9999px] bg-[#22c55e] shadow-[0px_0px_8px_0px_#22c55e]" />
-                    <span className="font-['Inter'] text-[13px] font-[500] leading-[18px] text-[#ffffff]">
-                      Running
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="w-full items-start gap-3 grid grid-cols-4 mobile:grid mobile:grid-cols-2">
-                <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-solid border-[#1f242b] bg-[#111418] px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    <RoundPeople className="font-['Inter'] text-[16px] font-[400] leading-[16px] text-[#7a828e]" />
-                    <span className="font-['Inter'] text-[12px] font-[500] leading-[16px] text-[#7a828e]">
-                      Players
-                    </span>
-                  </div>
-                  <span className="font-['Inter'] text-[20px] font-[700] leading-[28px] text-[#ffffff]">
-                    1 / 20
-                  </span>
-                </div>
-                <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-solid border-[#1f242b] bg-[#111418] px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    <RoundTimer className="font-['Inter'] text-[16px] font-[400] leading-[16px] text-[#7a828e]" />
-                    <span className="font-['Inter'] text-[12px] font-[500] leading-[16px] text-[#7a828e]">
-                      Uptime
-                    </span>
-                  </div>
-                  <span className="font-['Inter'] text-[20px] font-[700] leading-[28px] text-[#ffffff]">
-                    3h 12m
-                  </span>
-                </div>
-                <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-solid border-[#1f242b] bg-[#111418] px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    <RoundMemory className="font-['Inter'] text-[16px] font-[400] leading-[16px] text-[#7a828e]" />
-                    <span className="font-['Inter'] text-[12px] font-[500] leading-[16px] text-[#7a828e]">
-                      Memory
-                    </span>
-                  </div>
-                  <span className="font-['Inter'] text-[20px] font-[700] leading-[28px] text-[#ffffff]">
-                    2.1 / 4 GB
-                  </span>
-                </div>
-                <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-solid border-[#1f242b] bg-[#111418] px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    <RoundTroubleshoot className="font-['Inter'] text-[16px] font-[400] leading-[16px] text-[#7a828e]" />
-                    <span className="font-['Inter'] text-[12px] font-[500] leading-[16px] text-[#7a828e]">
-                      TPS
-                    </span>
-                  </div>
-                  <span className="font-['Inter'] text-[20px] font-[700] leading-[28px] text-[#22c55e]">
-                    20.0
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex h-9 items-center gap-1.5 rounded-[8px] border border-solid border-[#22c55e80] bg-[#123321] px-4 opacity-40">
-                  <RoundPlayArrow className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#ffffff]" />
-                  <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#ffffff]">
-                    Start
-                  </span>
-                </div>
-                <div className="flex h-9 items-center gap-1.5 rounded-[8px] border border-solid border-[#2a3038] bg-[#1a1e23] px-4 hover:bg-[#232830]">
-                  <RoundRefresh className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#e5e7eb]" />
-                  <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#e5e7eb]">
-                    Restart
-                  </span>
-                </div>
-                <div className="flex h-9 items-center gap-1.5 rounded-[8px] border border-solid border-[#ef4444] bg-[#2a1215] px-4 hover:bg-[#3a171b]">
-                  <RoundStop className="font-['Inter'] text-[18px] font-[400] leading-[20px] text-[#f87171]" />
-                  <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#fca5a5]">
-                    Stop
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex w-full grow shrink-0 basis-0 items-center gap-6">
-              <div className="flex grow shrink-0 basis-0 flex-col items-start gap-4 rounded-2xl border border-solid border-[#1f242b] bg-[#0e1114] px-6 py-5 mobile:px-4">
-                <span className="font-['Inter'] text-[16px] font-[600] leading-[24px] text-[#ffffff]">
-                  Identity
-                </span>
-                <div className="flex w-full flex-col items-start gap-2">
-                  <div className="flex items-center gap-1">
-                    <OutlineLabel className="font-['Inter'] text-[18px] font-[500] leading-[20px] text-[#c4c9d1]" />
-                    <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#c4c9d1]">
-                      Tinker Server Label
-                    </span>
-                  </div>
-                  <input
-                    className="h-10 w-full flex-none rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
-                    placeholder="Server label"
-                    value=""
-                    type="text"
-                  />
-                </div>
-                <div className="flex w-full flex-col items-start gap-2">
-                  <div className="flex items-center gap-1">
-                    <RoundShortText className="font-['Inter'] text-[18px] font-[500] leading-[20px] text-[#c4c9d1]" />
-                    <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#c4c9d1]">
-                      Server Description (MOTD)
-                    </span>
-                  </div>
-                  <textarea
-                    className="h-16 w-full flex-none rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 py-2 font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
-                    placeholder={
-                      "Message of the day\nTwo-lines with 59 characters each!"
-                    }
-                    value=""
-                  />
-                </div>
-              </div>
-              <div className="flex grow shrink-0 basis-0 flex-col items-start gap-4 self-stretch rounded-2xl border border-solid border-[#1f242b] bg-[#0e1114] px-6 py-5 mobile:px-4">
-                <span className="font-['Inter'] text-[16px] font-[600] leading-[24px] text-[#ffffff]">
-                  Software
-                </span>
-                <div className="flex w-full flex-col items-start gap-6 mobile:gap-4">
-                  <div className="flex w-full flex-col items-start gap-2">
-                    <div className="flex items-center gap-1">
-                      <RoundCode className="font-['Inter'] text-[18px] font-[500] leading-[20px] text-[#c4c9d1]" />
-                      <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#c4c9d1]">
-                        Server Loader
-                      </span>
-                    </div>
-                    <div className="flex h-10 w-full flex-none items-center justify-between rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 hover:border-[#3a414b]">
-                      <div className="flex items-center gap-2">
-                        <img
-                          className="h-5 w-5 flex-none object-contain"
-                          src="https://res.cloudinary.com/subframe/image/upload/v1793563275/uploads/47820/uuknirpioirlhs3yrltd.png"
-                        />
-                        <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#ffffff]">
-                          Vanilla
-                        </span>
-                      </div>
-                      <svg
-                        className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#7a828e]"
-                        width="1em"
-                        height="1em"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M6.3 8.3a1 1 0 0 1 1.4 0l4.3 4.3 4.3-4.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 0 1 0-1.4"
-                          fill="currentColor"
-                          fillOpacity="1"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="flex w-full flex-col items-start gap-2">
-                    <div className="flex items-center gap-1">
-                      <Versions className="font-['Inter'] text-[18px] font-[500] leading-[20px] text-[#c4c9d1]" />
-                      <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#c4c9d1]">
-                        Version
-                      </span>
-                    </div>
-                    <div className="flex h-10 w-full flex-none items-center justify-between rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 hover:border-[#3a414b]">
-                      <span className="font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#ffffff]">
-                        1.21.1
-                      </span>
-                      <svg
-                        className="font-['Inter'] text-[16px] font-[400] leading-[24px] text-[#7a828e]"
-                        width="1em"
-                        height="1em"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M6.3 8.3a1 1 0 0 1 1.4 0l4.3 4.3 4.3-4.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 0 1 0-1.4"
-                          fill="currentColor"
-                          fillOpacity="1"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex grow shrink-0 basis-0 flex-col items-start gap-4 self-stretch rounded-2xl border border-solid border-[#1f242b] bg-[#0e1114] px-6 py-5 mobile:px-4">
-                <span className="font-['Inter'] text-[16px] font-[600] leading-[24px] text-[#ffffff]">
-                  Resources &amp; network
-                </span>
-                <div className="flex w-full flex-col items-start gap-6 mobile:gap-4">
-                  <div className="flex w-full flex-col items-start gap-2">
-                    <div className="flex items-center gap-1">
-                      <RoundSettingsEthernet className="font-['Inter'] text-[18px] font-[500] leading-[20px] text-[#c4c9d1]" />
-                      <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#c4c9d1]">
-                        Port
-                      </span>
-                    </div>
-                    <input
-                      className="h-10 w-full flex-none rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
-                      placeholder="Port (eg. 25565)"
-                      value="25565"
-                      type="number"
+    <div className="flex w-full flex-col items-start bg-[#0b0d10] min-h-full font-['Inter']">
+      <PageShell
+        className="h-auto w-full flex-none"
+        header={<ConnectedHeader />}
+        tabs={<TabBar selected="server" onNavigate={onNavigate} />}
+        title="Server"
+        subtitle={server ? `Control, configure and monitor ${server.name}.` : "Create a server or import one to get started."}
+        actions={
+          <>
+            <PrimaryButton
+              icon={<RoundManageAccounts />}
+              text="Manage whitelist"
+              color="gray"
+              size="sm"
+              onClick={() => onNavigate("Players")}
+            />
+            <PrimaryButton icon={<RoundUpload />} text="Import server" size="sm" onClick={openImportServer} />
+            <PrimaryButton icon={<RoundAdd />} text="Create server" size="sm" onClick={openCreateServer} />
+          </>
+        }
+      >
+        <ServerGate>
+          {server && (
+            <>
+              <div className="flex w-full flex-col items-start gap-5 rounded-2xl border border-solid border-[#1f242b] bg-[#0e1114] px-6 py-5 mobile:px-4">
+                <div className="flex w-full items-center gap-4 mobile:flex-col mobile:items-start">
+                  <div className="flex grow shrink-0 basis-0 items-center gap-3">
+                    <ConsoleServerHeader
+                      image={DEFAULT_SERVER_ICON}
+                      name={server.name}
+                      loader={serverTypeLabel(server.type)}
+                      version={server.version || "unknown version"}
+                      port={String(server.port)}
+                      currentPlayers={running ? String(online.length) : "0"}
+                      maxPlayers={maxPlayers !== null ? String(maxPlayers) : "?"}
                     />
                   </div>
-                  <div className="flex w-full flex-col items-start gap-2">
-                    <div className="flex items-center gap-1">
-                      <RoundMemory className="font-['Inter'] text-[18px] font-[500] leading-[20px] text-[#c4c9d1]" />
-                      <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#c4c9d1]">
-                        Max Memory
-                      </span>
-                    </div>
-                    <input
-                      className="h-10 w-full flex-none rounded-[8px] border border-solid border-[#2a3038] bg-[#0b0d10] px-3 font-['Inter'] text-[14px] font-[400] leading-[20px] text-[#ffffff] outline-none placeholder:text-[#7a828e] focus-within:border-[#22c55e]"
-                      placeholder="4 GB"
-                      value="4 GB"
-                      type="text"
-                    />
-                  </div>
+                  <StatusPill variant={status.variant} label={status.label} />
+                </div>
+                <div className="w-full items-start gap-3 grid grid-cols-5 mobile:grid mobile:grid-cols-2">
+                  <StatCard
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    icon={<RoundMemory />}
+                    label="Host CPU"
+                    value={stats ? `${Math.round(stats.cpuPercent)}%` : "—"}
+                    title="The whole server PC. Per-server CPU needs an Agent update."
+                  />
+                  <StatCard
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    icon={<RoundMemory />}
+                    label="Host memory"
+                    value={stats ? `${formatGB(stats.memUsedBytes)} / ${formatGB(stats.memTotalBytes)} GB` : "—"}
+                    title="The whole server PC. Per-server memory needs an Agent update."
+                  />
+                  <StatCard
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    icon={<RoundPeople />}
+                    label="Players"
+                    value={running ? `${online.length} / ${maxPlayers ?? "?"}` : "—"}
+                  />
+                  <StatCard
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    icon={<RoundTimer />}
+                    label="Uptime"
+                    value={running && live.state.startedAt ? formatDuration(now - live.state.startedAt) : "—"}
+                  />
+                  <StatCard
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    icon={<RoundTroubleshoot />}
+                    label="TPS"
+                    value="—"
+                    title={NOT_YET}
+                  />
+                </div>
+                <div className="flex w-full flex-wrap items-center gap-2">
+                  <PrimaryButton
+                    icon={<RoundPlayArrow />}
+                    text={action === "starting" ? "Starting…" : "Start"}
+                    disabled={running || busy}
+                    onClick={() => {
+                      if (!running && !busy) void startServer(server.id);
+                    }}
+                  />
+                  <PrimaryButton
+                    icon={<RoundRefresh />}
+                    text={action === "restarting" ? "Restarting…" : "Restart"}
+                    color="gray-warning"
+                    disabled={!running || busy}
+                    onClick={() => {
+                      if (running) guarded("restart");
+                    }}
+                  />
+                  <PrimaryButton
+                    icon={<RoundStop />}
+                    text={action === "stopping" ? "Stopping…" : "Stop"}
+                    color="red"
+                    disabled={!running || busy}
+                    onClick={() => {
+                      if (running) guarded("stop");
+                    }}
+                  />
+                  <span className="font-['Inter'] text-[12px] font-[400] leading-[16px] text-[#7a828e] pl-2">
+                    Stop saves the world and shuts down. If it's stuck after 60s, the Agent force-stops it.
+                  </span>
                 </div>
               </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <PrimaryButton
-                tooltip="When you hover over this button, this text appears!"
-                icon={<RoundPersonAddAlt1 />}
-                text="manage whitelisted Players"
-                color="gray"
+
+              <PreviewBanner
+                title="Settings are read-only for now"
+                description="Values below come from the Agent. Editing server.properties, memory and startup options needs an Agent update."
               />
-              <PrimaryButton
-                tooltip="When you hover over this button, this text appears!"
-                icon={<RoundUpload />}
-                text="Import Server"
-                color="gray"
-              />
-            </div>
-            <div className="flex w-full flex-col items-center gap-6">
-              <UnsavedChangesPrompt amountOfUnsavedChanges="3" />
-            </div>
-          </section>
-        </div>
-      </main>
+
+              <div className="w-full items-start gap-6 grid grid-cols-3 mobile:grid mobile:grid-cols-1">
+                <SectionCard title="Identity" description="MOTD is public to anyone with IP." headerAction={<SoonBadge />}>
+                  <div className="flex w-full flex-col items-start gap-4 px-5 py-5 mobile:px-4">
+                    <InputField
+                      required={true}
+                      title="Server label"
+                      labelIcon={<OutlineLabel />}
+                      helperText="Only shown inside Tinker."
+                      input={<input className={inputClass} value={server.name} readOnly disabled type="text" />}
+                    />
+                    <InputField
+                      title="MOTD"
+                      labelIcon={<RoundShortText />}
+                      helperText="Two lines, up to 59 characters each."
+                      input={<textarea className={`h-16 ${textareaClass}`} placeholder="Message of the day" disabled value="" />}
+                    />
+                    <InputField
+                      title="Icon"
+                      labelIcon={<RoundImage />}
+                      helperText="Image upload support not finished yet."
+                    />
+                  </div>
+                </SectionCard>
+                <SectionCard title="Software" description="Changing these requires a restart." headerAction={<SoonBadge />}>
+                  <div className="flex w-full flex-col items-start gap-4 px-5 py-5 mobile:px-4">
+                    <SelectField label="Loader" placeholder={serverTypeLabel(server.type)} helperText="" disabled />
+                    <SelectField label="Minecraft version" placeholder={server.version || "Unknown"} helperText="" disabled />
+                    <SelectField label="Java runtime" placeholder="—" helperText="Detected on the server PC." disabled />
+                  </div>
+                </SectionCard>
+                <SectionCard
+                  title="Resources & network"
+                  description="Memory and the port players connect to."
+                  headerAction={<SoonBadge />}
+                >
+                  <div className="flex w-full flex-col items-start gap-4 px-5 py-5 mobile:px-4">
+                    <PrimaryButton icon={<TopSpeed20Filled />} text="Run Performance Test" disabled={true} />
+                    <InputField
+                      required={true}
+                      title="Max memory"
+                      labelIcon={<RoundMemory />}
+                      helperText={`${hostTotalGb ? `Host has ${hostTotalGb} GB. ` : ""}6–10 GB is plenty for most modpacks. Too much can hurt performance.`}
+                      input={<input className={inputClass} value={memoryGb} readOnly disabled type="number" />}
+                      trailing={
+                        <span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#7a828e]">GB</span>
+                      }
+                    />
+                    <InputField
+                      required={true}
+                      title="Port"
+                      labelIcon={<RoundSettingsEthernet />}
+                      input={<input className={inputClass} value={String(server.port)} readOnly disabled type="number" />}
+                    />
+                  </div>
+                </SectionCard>
+              </div>
+
+              <SectionCard
+                className={previewClass}
+                title="Gameplay"
+                description="The most-used server.properties settings. Edit the rest in Files."
+                headerAction={<SoonBadge />}
+              >
+                <div className="w-full items-start gap-4 border-b border-solid border-[#1f242b] px-5 py-5 grid grid-cols-4 mobile:px-4 mobile:grid mobile:grid-cols-1">
+                  <SelectField className="h-auto grow shrink-0 basis-0 self-stretch" label="Difficulty" placeholder="—" helperText="" disabled />
+                  <SelectField className="h-auto grow shrink-0 basis-0 self-stretch" label="Gamemode" placeholder="—" helperText="" disabled />
+                  <InputField
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    required={true}
+                    title="Max players"
+                    input={<input className={inputClass} value={maxPlayers !== null ? String(maxPlayers) : ""} placeholder="—" readOnly disabled />}
+                  />
+                  <InputField
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    required={true}
+                    title="View distance"
+                    input={<input className={inputClass} placeholder="—" readOnly disabled />}
+                    trailing={<span className="font-['Inter'] text-[14px] font-[500] leading-[20px] text-[#7a828e]">chunks</span>}
+                  />
+                </div>
+                <div className="w-full items-start grid grid-cols-2 mobile:grid mobile:grid-cols-1">
+                  <SettingRow
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    title="PvP"
+                    description="Players can damage each other."
+                    control={<Switch checked={false} disabled={true} />}
+                    divider={true}
+                  />
+                  <SettingRow
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    title="Whitelist"
+                    description="Only whitelisted players can join."
+                    control={<Switch checked={false} disabled={true} />}
+                    divider={true}
+                  />
+                  <SettingRow
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    title="Online mode"
+                    description="Verify accounts with Mojang. Keep on unless you know why."
+                    control={<Switch checked={false} disabled={true} />}
+                  />
+                  <SettingRow
+                    className="h-auto grow shrink-0 basis-0 self-stretch"
+                    title="Allow flight"
+                    description="Stops modded jetpacks from kicking players."
+                    control={<Switch checked={false} disabled={true} />}
+                  />
+                </div>
+              </SectionCard>
+              <div className="w-full items-start gap-6 grid grid-cols-2 mobile:grid mobile:grid-cols-1">
+                <SectionCard
+                  className={previewClass}
+                  title="Startup"
+                  description="What happens when the server PC boots or the server crashes."
+                  headerAction={<SoonBadge />}
+                >
+                  <SettingRow
+                    title="Start with Agent"
+                    description="Start this server automatically when Tinker Agent starts."
+                    control={<Switch checked={false} disabled={true} />}
+                    divider={true}
+                  />
+                  <SettingRow
+                    title="Auto-restart on crash"
+                    description="Restart up to 3 times, then stop and notify you."
+                    control={<Switch checked={false} disabled={true} />}
+                  />
+                </SectionCard>
+                <SectionCard
+                  className={previewClass}
+                  title="Danger zone"
+                  description="These can't be undone. Make a backup first."
+                  variant="danger"
+                  headerAction={<SoonBadge />}
+                >
+                  <SettingRow
+                    title="Reset server settings"
+                    description={`Restore server.properties to ${serverTypeLabel(server.type)} defaults. Worlds and mods stay.`}
+                    control={<PrimaryButton icon={<RoundRefresh />} text="Reset" color="gray-dangerous" size="sm" disabled={true} />}
+                    divider={true}
+                  />
+                  <SettingRow
+                    title="Delete server"
+                    description={`Removes ${server.name}, its worlds, mods and backups from the server PC.`}
+                    control={<PrimaryButton icon={<RoundDelete />} text="Delete" color="red" size="sm" disabled={true} />}
+                  />
+                </SectionCard>
+              </div>
+            </>
+          )}
+        </ServerGate>
+      </PageShell>
+      {prompt}
     </div>
   );
 }
